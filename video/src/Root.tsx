@@ -2,6 +2,8 @@ import type React from 'react';
 import { Composition } from 'remotion';
 import { Demo, DEMO_DURATION_IN_FRAMES } from './compositions/Demo';
 import { MascotSheet, MASCOT_SHEET_DURATION } from './compositions/MascotSheet';
+import { Generated, generatedSchema, totalFrames, type GeneratedProps } from './compositions/Generated';
+import { Thumbnail, thumbnailSchema } from './compositions/Thumbnail';
 import { theme } from './theme/index';
 
 /**
@@ -21,6 +23,47 @@ export const RemotionRoot: React.FC = () => (
       fps={theme.timing.fps}
       width={1920}
       height={1080}
+    />
+
+    {/*
+      La composicion de los videos reales. Se construye desde el storyboard
+      que produce el pipeline, que llega como props de entrada:
+
+        npx remotion render src/index.ts Generated out.mp4 --props=<storyboard.json>
+
+      La duracion sale de las props, asi que el video dura exactamente lo que
+      dura la narracion y nadie mantiene el numero sincronizado a mano.
+    */}
+    <Composition
+      id="Generated"
+      component={Generated}
+      schema={generatedSchema}
+      defaultProps={{ videoId: '', fps: theme.timing.fps, width: 1920, height: 1080, scenes: [] }}
+      calculateMetadata={({ props }: { props: GeneratedProps }) => ({
+        durationInFrames: totalFrames(props),
+        fps: props.fps ?? theme.timing.fps,
+        width: props.width ?? 1920,
+        height: props.height ?? 1080,
+      })}
+      durationInFrames={150}
+      fps={theme.timing.fps}
+      width={1920}
+      height={1080}
+    />
+
+    {/*
+      Miniatura. Se renderiza como still, no como video:
+        npx remotion still src/index.ts Thumbnail out.png --props=<props.json>
+    */}
+    <Composition
+      id="Thumbnail"
+      component={Thumbnail}
+      schema={thumbnailSchema}
+      defaultProps={{ headline: 'Titular de la miniatura', kicker: 'Ingenieria explicada' }}
+      durationInFrames={1}
+      fps={theme.timing.fps}
+      width={1280}
+      height={720}
     />
 
     {/* Control de calidad de la identidad, no contenido del canal. */}

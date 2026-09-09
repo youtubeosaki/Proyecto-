@@ -7,7 +7,15 @@ import {
 import { ApprovalRepository, StageRunRepository, VideoRepository, openDatabase } from '@osaki/db';
 import { listTopIdeas, runIdeasStage } from '@osaki/ingest';
 import { readFactSheet, runResearchStage } from '@osaki/research';
-import { chosenAngle, readAngles, runAnglesStage, runScriptStage } from '@osaki/script';
+import { chosenAngle, readAngles, readScript, runAnglesStage, runScriptStage } from '@osaki/script';
+import {
+  readAudio,
+  readStoryboard,
+  runAudioStage,
+  runPackagingStage,
+  runRenderStage,
+  runStoryboardStage,
+} from '@osaki/compose';
 
 const log = createLogger('run');
 
@@ -153,6 +161,93 @@ async function execute(stage: Stage, videoId: string, title: string): Promise<Ru
           `Titulo: ${script.title}`,
           '',
           'La fase 3 (storyboard, audio y render) llega despues.',
+        ],
+      };
+    }
+
+    case 'storyboard': {
+      const script = readScript(videoId);
+      const storyboard = await runStoryboardStage(videoId, script);
+
+      return {
+        summary: [
+          `Storyboard con ${storyboard.scenes.length} escenas.`,
+          '',
+          ...storyboard.scenes.map(
+            (scene) => `  ${String(scene.segmentIndex).padStart(2)}. ${scene.kind}`,
+          ),
+          '',
+          `Siguiente:  pnpm osaki run audio --video ${videoId}`,
+        ],
+      };
+    }
+
+    case 'audio': {
+      const script = readScript(videoId);
+      const storyboard = readStoryboard(videoId);
+      const audio = await runAudioStage(videoId, script, storyboard);
+
+      const minutes = Math.floor(audio.totalSeconds / 60);
+      const seconds = Math.round(audio.totalSeconds % 60);
+
+      return {
+        summary: [
+          `Audio de ${audio.segments.length} segmentos con el proveedor "${audio.provider}".`,
+          `Duracion total: ${minutes}m ${String(seconds).padStart(2, '0')}s.`,
+          '',
+          'El storyboard se reescribio con el timing real de la narracion.',
+          '',
+          `Siguiente:  pnpm osaki run render --video ${videoId}`,
+        ],
+      };
+    }
+
+    case 'render': {
+      const storyboard = readStoryboard(videoId);
+      const audio = readAudio(videoId);
+      const result = await runRenderStage(videoId, storyboard, audio);
+
+      return {
+        awaitingHuman: true,
+        artifactPath: result.videoPath,
+        summary: [
+          'APROBACION HUMANA #2 — revisa el video antes de que exista ninguna subida:',
+          '',
+          `  ${result.videoPath}`,
+          `  ${result.durationSeconds.toFixed(1)} segundos`,
+          '',
+          `Si te convence:  pnpm osaki approve render --video ${videoId}`,
+          `Si no:           pnpm osaki approve render --video ${videoId} --reject --notes "..."`,
+        ],
+      };
+    }
+
+    case 'packaging': {
+      const script = readScript(videoId);
+      const sheet = readFactSheet(videoId);
+      const audio = readAudio(videoId);
+      const angle = chosenAngle(readAngles(videoId));
+
+      if (!angle) {
+        throw new OsakiError(`El video ${videoId} no tiene angulo elegido.`, { stage: 'packaging' });
+      }
+
+      const packaging = await runPackagingStage(videoId, script, sheet, audio, angle);
+
+      return {
+        summary: [
+          'Titulos propuestos:',
+          ...packaging.titles.map((title) => `  [${title.strategy}] ${title.text}`),
+          '',
+          `Capitulos: ${packaging.chapters.length}   Tags: ${packaging.tags.length}`,
+          `Miniaturas por renderizar: ${packaging.thumbnails.length}`,
+          '',
+          'Renderiza las miniaturas con:',
+          ...packaging.thumbnails.map(
+            (thumb, index) =>
+              `  pnpm --filter @osaki/video exec remotion still src/index.ts Thumbnail ` +
+              `../data/renders/${videoId}/thumb-${index + 1}.png --props='${JSON.stringify(thumb)}'`,
+          ),
         ],
       };
     }

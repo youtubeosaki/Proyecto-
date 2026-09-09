@@ -1,0 +1,124 @@
+{
+  "scenes": [
+    { "segmentIndex": 0, "kind": "titleCard", "props": { "eyebrow": "Ingenieria explicada", "title": "Por que tu telefono manda el mismo mensaje varias veces", "subtitle": "La fiabilidad no evita los fallos: asume que van a pasar." } },
+    { "segmentIndex": 1, "kind": "networkDiagram", "props": {
+      "caption": "El telefono manda el mensaje y se queda esperando.",
+      "nodes": [
+        { "id": "phone", "label": "Tu telefono", "sublabel": "cliente", "x": 15, "y": 60, "variant": "accent" },
+        { "id": "server", "label": "Servidor", "sublabel": "almacena y reenvia", "x": 85, "y": 60 }
+      ],
+      "links": [{ "from": "phone", "to": "server" }],
+      "packets": [
+        { "from": "phone", "to": "server", "label": "mensaje", "startFrame": 20, "durationInFrames": 40, "tone": "accent" }
+      ],
+      "guide": { "size": 220, "beats": [
+        { "atFrame": 10, "atNode": "phone", "lookAtNode": "phone", "point": true, "expression": "curious" },
+        { "atFrame": 75, "atNode": "server", "lookAtNode": "server", "point": true, "expression": "focused" }
+      ] }
+    } },
+    { "segmentIndex": 2, "kind": "sideBySide", "props": {
+      "title": "Desde fuera, las dos situaciones se ven igual",
+      "left": { "heading": "El mensaje se perdio", "tone": "danger", "points": ["Nunca llego al servidor", "No hay nada que confirmar", "Silencio"] },
+      "right": { "heading": "La confirmacion se perdio", "tone": "neutral", "points": ["El mensaje si llego", "El servidor si confirmo", "Silencio, otra vez"] }
+    } },
+    { "segmentIndex": 3, "kind": "counter", "props": {
+      "label": "El plazo antes de dar un mensaje por perdido no es fijo. Se calcula asi:",
+      "from": 0, "to": 4, "unit": "x RTTVAR", "decimals": 0, "thousandsSeparator": "",
+      "durationInFrames": 45,
+      "footnote": "RFC 6298: RTO = SRTT + max(G, K*RTTVAR), con K = 4."
+    } },
+    { "segmentIndex": 4, "kind": "timeline", "props": {
+      "title": "El temporizador se adapta a la red",
+      "events": [
+        { "label": "Se mide el RTT", "atFrame": 10, "detail": "cada ida y vuelta", "tone": "accent" },
+        { "label": "Media movil", "atFrame": 35, "detail": "SRTT", "tone": "accent" },
+        { "label": "Variacion", "atFrame": 60, "detail": "RTTVAR", "tone": "warn" },
+        { "label": "Plazo", "atFrame": 85, "detail": "RTO", "tone": "ok" }
+      ]
+    } },
+    { "segmentIndex": 5, "kind": "networkDiagram", "props": {
+      "caption": "El original si llego. El reintento crea un duplicado.",
+      "nodes": [
+        { "id": "phone", "label": "Tu telefono", "x": 15, "y": 60, "variant": "accent" },
+        { "id": "server", "label": "Servidor", "x": 85, "y": 60 }
+      ],
+      "links": [{ "from": "phone", "to": "server" }],
+      "packets": [
+        { "from": "phone", "to": "server", "label": "msg #1", "startFrame": 10, "durationInFrames": 35, "tone": "accent" },
+        { "from": "server", "to": "phone", "label": "ACK", "startFrame": 50, "durationInFrames": 35, "tone": "danger", "drops": true },
+        { "from": "phone", "to": "server", "label": "msg #1 otra vez", "startFrame": 95, "durationInFrames": 35, "tone": "warn" }
+      ],
+      "guide": { "size": 210, "beats": [
+        { "atFrame": 15, "atNode": "phone", "lookAtPacket": 0, "expression": "focused" },
+        { "atFrame": 70, "atNode": "phone", "lookAtPacket": 1, "expression": "surprised" },
+        { "atFrame": 120, "atNode": "server", "lookAtNode": "server", "point": true, "expression": "thinking" }
+      ] }
+    } },
+    { "segmentIndex": 6, "kind": "codeBlock", "props": {
+      "title": "Deduplicacion por identificador",
+      "language": "typescript",
+      "lines": [
+        "function recibir(mensaje: Mensaje) {",
+        "  if (yaProcesados.has(mensaje.id)) {",
+        "    return;",
+        "  }",
+        "",
+        "  yaProcesados.add(mensaje.id);",
+        "  entregar(mensaje);",
+        "}"
+      ],
+      "highlights": [
+        { "lines": [1, 2, 3], "startFrame": 30, "note": "Si ya lo vimos, se descarta sin decir nada." },
+        { "lines": [5, 6], "startFrame": 80, "note": "Y solo entonces se entrega, una unica vez." }
+      ]
+    } },
+    { "segmentIndex": 7, "kind": "sideBySide", "props": {
+      "title": "Dos confirmaciones que no significan lo mismo",
+      "left": { "heading": "ACK de TCP", "tone": "neutral", "points": ["Los bytes llegaron al sistema operativo", "El TCP receptor asumio la responsabilidad", "La aplicacion puede no haberlos visto"] },
+      "right": { "heading": "Acuse de aplicacion", "tone": "ok", "points": ["La app leyo el mensaje", "Y lo guardo", "Solo entonces confirma"] }
+    } },
+    { "segmentIndex": 8, "kind": "timeline", "props": {
+      "title": "El hueco entre las dos confirmaciones",
+      "events": [
+        { "label": "Llegan los bytes", "atFrame": 10, "detail": "TCP", "tone": "accent" },
+        { "label": "ACK de TCP", "atFrame": 35, "detail": "confirmado", "tone": "accent" },
+        { "label": "La app se cierra", "atFrame": 60, "detail": "el hueco", "tone": "danger" },
+        { "label": "Acuse que nunca llega", "atFrame": 85, "detail": "perdido", "tone": "danger" }
+      ]
+    } },
+    { "segmentIndex": 9, "kind": "networkDiagram", "props": {
+      "caption": "El servidor no suelta el mensaje hasta tener confirmacion.",
+      "nodes": [
+        { "id": "sender", "label": "Emisor", "x": 12, "y": 35, "variant": "accent" },
+        { "id": "server", "label": "Servidor", "sublabel": "lo guarda", "x": 50, "y": 62 },
+        { "id": "receiver", "label": "Destinatario", "sublabel": "apagado", "x": 88, "y": 35, "variant": "muted" }
+      ],
+      "links": [{ "from": "sender", "to": "server" }, { "from": "server", "to": "receiver" }],
+      "packets": [
+        { "from": "sender", "to": "server", "label": "mensaje", "startFrame": 15, "durationInFrames": 35, "tone": "accent" },
+        { "from": "server", "to": "receiver", "label": "intento", "startFrame": 60, "durationInFrames": 35, "tone": "danger", "drops": true },
+        { "from": "server", "to": "receiver", "label": "entregado", "startFrame": 115, "durationInFrames": 35, "tone": "ok" }
+      ],
+      "guide": { "size": 200, "beats": [
+        { "atFrame": 20, "atNode": "server", "lookAtNode": "server", "point": true, "expression": "focused" },
+        { "atFrame": 145, "atNode": "receiver", "lookAtNode": "receiver", "point": true, "expression": "happy" }
+      ] }
+    } },
+    { "segmentIndex": 10, "kind": "timeline", "props": {
+      "title": "Ninguna capa se fia de la de abajo",
+      "events": [
+        { "label": "TCP", "atFrame": 10, "detail": "bytes", "tone": "accent" },
+        { "label": "Servidor", "atFrame": 40, "detail": "almacenado", "tone": "accent" },
+        { "label": "Aplicacion", "atFrame": 70, "detail": "leido", "tone": "ok" },
+        { "label": "Usuario", "atFrame": 100, "detail": "visto", "tone": "ok" }
+      ]
+    } },
+    { "segmentIndex": 11, "kind": "counter", "props": {
+      "label": "Confirmaciones necesarias para dar un mensaje por entregado",
+      "from": 0, "to": 3, "unit": "", "decimals": 0, "thousandsSeparator": "",
+      "durationInFrames": 40,
+      "footnote": "La entrega exactamente una vez no existe. Existe reintentar hasta que alguien confirme, y tirar lo que llegue repetido."
+    } }
+  ],
+  "missingComponents": []
+}

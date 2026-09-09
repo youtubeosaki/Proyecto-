@@ -20,6 +20,9 @@ importers:
 
   packages/cli:
     dependencies:
+      '@osaki/compose':
+        specifier: workspace:*
+        version: link:../compose
       '@osaki/core':
         specifier: workspace:*
         version: link:../core
@@ -38,6 +41,27 @@ importers:
       '@osaki/script':
         specifier: workspace:*
         version: link:../script
+      '@osaki/voice':
+        specifier: workspace:*
+        version: link:../voice
+
+  packages/compose:
+    dependencies:
+      '@osaki/core':
+        specifier: workspace:*
+        version: link:../core
+      '@osaki/llm':
+        specifier: workspace:*
+        version: link:../llm
+      '@osaki/script':
+        specifier: workspace:*
+        version: link:../script
+      '@osaki/voice':
+        specifier: workspace:*
+        version: link:../voice
+      zod:
+        specifier: ^3.24.1
+        version: 3.25.76
 
   packages/core:
     dependencies:
@@ -120,6 +144,15 @@ importers:
       '@osaki/research':
         specifier: workspace:*
         version: link:../research
+      zod:
+        specifier: ^3.24.1
+        version: 3.25.76
+
+  packages/voice:
+    dependencies:
+      '@osaki/core':
+        specifier: workspace:*
+        version: link:../core
       zod:
         specifier: ^3.24.1
         version: 3.25.76

@@ -44,6 +44,14 @@ export const okiSchema = z.object({
    * handPose = 'point'.
    */
   pointAngle: z.number().default(0),
+  /**
+   * Salta la animacion de entrada y aparece ya asentado.
+   *
+   * Lo necesitan las imagenes fijas: una miniatura se renderiza en el frame
+   * 0, y en el frame 0 la entrada esta en opacidad cero. Sin esto, la
+   * miniatura sale sin personaje y el fallo no avisa.
+   */
+  animateEntrance: z.boolean().default(true),
 });
 
 /**
@@ -240,16 +248,17 @@ const Hand: React.FC<{
     // Pulgar levantado, que es lo que hace que el resto se lea como puño.
     fingers.push(finger('thumb', -r * 0.1, -r * 0.35, -r * 0.35, -r * 1.15, r * 0.5));
   } else if (pose === 'present' || pose === 'wave') {
-    // Cuatro dedos abiertos en abanico.
-    [-38, -13, 13, 38].forEach((deg, index) => {
+    // Cuatro dedos abiertos en abanico. Angulos contenidos: mas abiertos, a
+    // tamaño de miniatura la mano deja de leerse como mano.
+    [-27, -9, 9, 27].forEach((deg, index) => {
       const radians = (deg * Math.PI) / 180;
       fingers.push(
         finger(
           `open${index}`,
           Math.cos(radians) * r * 0.45,
           Math.sin(radians) * r * 0.45,
-          Math.cos(radians) * r * 1.95,
-          Math.sin(radians) * r * 1.95,
+          Math.cos(radians) * r * 1.7,
+          Math.sin(radians) * r * 1.7,
           r * 0.5,
         ),
       );
@@ -401,6 +410,7 @@ export const Oki: React.FC<OkiProps> = ({
   size = 220,
   handPose = 'idle',
   pointAngle = 0,
+  animateEntrance = true,
 }) => {
   const frame = useCurrentFrame();
   const { fps, durationInFrames } = useVideoConfig();
@@ -412,7 +422,9 @@ export const Oki: React.FC<OkiProps> = ({
 
   const shape = eyeShapeFor(expression);
   const blink = blinkAmount(frame, blinkSchedule);
-  const entrance = popIn(frame, startFrame, fps);
+  const entrance = animateEntrance
+    ? popIn(frame, startFrame, fps)
+    : { opacity: 1, translateY: 0, scale: 1, blur: 0 };
 
   // Respiracion y flotacion. Fase derivada de la semilla para que dos Okis
   // en pantalla no respiren al unisono.

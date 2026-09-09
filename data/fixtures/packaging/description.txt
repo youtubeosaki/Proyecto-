@@ -1,0 +1,18 @@
+{
+  "summary": "Para que un mensaje no se pierda, el sistema asume que va a fallar. Este video recorre las tres confirmaciones que hacen falta para dar un mensaje por entregado, por que el ACK de TCP no basta, y por que la entrega exactamente una vez no existe.",
+  "chapters": [
+    { "time": "0:00", "title": "El truco: mandarlo dos veces" },
+    { "time": "0:14", "title": "Que pasa cuando no llega respuesta" },
+    { "time": "0:26", "title": "Dos fallos que se ven igual desde fuera" },
+    { "time": "0:44", "title": "Como se calcula el plazo de reintento" },
+    { "time": "1:08", "title": "El reintento crea duplicados" },
+    { "time": "1:35", "title": "Deduplicacion por identificador" },
+    { "time": "1:52", "title": "El ACK de TCP no dice lo que parece" },
+    { "time": "2:26", "title": "El servidor guarda y espera" },
+    { "time": "2:55", "title": "Ninguna capa se fia de la de abajo" }
+  ],
+  "tags": [
+    "TCP", "retransmision", "RFC 6298", "acuse de recibo", "idempotencia",
+    "sistemas distribuidos", "mensajeria", "exactly-once", "deduplicacion", "protocolos de red"
+  ]
+}

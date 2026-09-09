@@ -28,7 +28,9 @@ restriccion es estructural.
   transiciones, cama sonora generada y un video de prueba renderizado.
 - **Fase 2 — completa.** Banco de ideas, investigacion con verificacion de
   fuentes, tres angulos con aprobacion humana, y guion con marcas de escena.
-- Fase 3 — audio, timing y render end-to-end.
+- **Fase 3 — completa.** Storyboard, narracion por segmentos, timing contra
+  el audio real, render de la composicion generada, y empaque con titulos,
+  descripcion, capitulos, fuentes, tags y miniaturas.
 - Fase 4 — n8n orquestando, con las aprobaciones humanas.
 - Fase 5 — subida, Shorts y bucle de analitica.
 
@@ -91,6 +93,8 @@ packages/llm      Interfaz de LLM + 3 adaptadores + cargador de prompts
 packages/ingest   RSS, Hacker News, deduplicacion y scoring de ideas
 packages/research Investigacion + verificacion de fuentes
 packages/script   Angulos, guion y parser de marcas de escena
+packages/voice    Interfaz de voz: tu grabacion o TTS local
+packages/compose  Storyboard, timing contra el audio y render
 packages/cli      Binario `osaki`
 video/            Proyecto de Remotion: tema, componentes, composiciones
 prompts/          Prompts versionados, nunca embebidos en codigo
@@ -310,3 +314,86 @@ revisa al no haber nada en rojo.
 Cada segmento del guion lleva los ids de las afirmaciones en las que se
 apoya, y cada afirmacion lleva su fuente y su cita literal. Se puede seguir
 cualquier frase del video hasta el RFC del que sale.
+
+## Fase 3: del guion al video
+
+```powershell
+pnpm osaki run storyboard --video <id>    # marcas de escena -> props
+node tools/make-scratch-narration.mjs <id>  # opcional: pistas mudas de prueba
+pnpm osaki run audio      --video <id>    # narracion y timing real
+pnpm osaki run render     --video <id>    # APROBACION HUMANA #2
+```
+
+### La narracion va por segmentos, no en un archivo largo
+
+Tres razones, y la primera es la que decide:
+
+1. **La duracion de cada archivo ES el timing de su escena.** Con un audio
+   largo habria que alinearlo contra el texto, lo que exige reconocimiento de
+   voz y falla justo en los terminos tecnicos que son el contenido del canal.
+2. Una retoma cuesta un segmento, no el video entero.
+3. Cambiar una frase del guion solo invalida su segmento.
+
+Con `VOICE_PROVIDER=file` (por defecto), la etapa busca tus WAV y, si faltan,
+escribe `data/audio/<id>/POR-GRABAR.md` con el texto exacto de cada segmento
+y el nombre de archivo que le toca. Grabas, reejecutas, y los que ya existan
+no se repiten.
+
+`tools/make-scratch-narration.mjs` genera pistas **mudas** con la duracion
+estimada por numero de palabras. Sirve para ver el montaje completo con sus
+tiempos antes de grabar nada: descubrir que una escena se queda corta cuesta
+mucho menos ahi que despues de doce tomas.
+
+Con `VOICE_PROVIDER=piper` genera voz local gratuita, util como pista de
+referencia o como voz definitiva.
+
+### El timing se acumula redondeado
+
+Cada escena dura lo que dura su audio mas 0,35 s de aire. La duracion se
+redondea a frames enteros y se acumula **el valor ya redondeado**, no el
+exacto: acumulando el exacto y redondeando al final, los errores se suman y
+el audio acaba desplazado en los ultimos segmentos.
+
+### La composicion se construye desde el storyboard
+
+`Generated` recibe el storyboard como props de entrada y calcula su propia
+duracion con `calculateMetadata`, asi que el video dura exactamente lo que
+dura la narracion sin que nadie mantenga un numero en dos sitios.
+
+```powershell
+npx remotion render src/index.ts Generated out.mp4 --props=<storyboard.json>
+```
+
+El pipeline invoca esa misma linea de comandos en vez de la API programatica
+de Remotion, a proposito: cuando un render falla, el error trae el comando
+exacto y lo puedes reproducir a mano sin replicar como lo llama el pipeline.
+
+Si una escena tiene un tipo desconocido o props que no validan, **no se
+sustituye por otra parecida**: se pinta un cartel rojo con el nombre que
+falta. Un fallback silencioso produce un render sin errores que explica mal,
+y ese es el peor fallo posible porque nadie lo revisa.
+
+### Empaque
+
+```powershell
+pnpm osaki run packaging --video <id>
+```
+
+Cinco titulos con cinco estrategias distintas (mecanismo, contradiccion,
+pregunta, numero, y el recomendado), descripcion con capitulos, fuentes y
+tags, y props para tres miniaturas.
+
+Dos cosas NO las escribe el modelo:
+
+- **Las marcas de tiempo de los capitulos** se calculan desde el timing real
+  del audio y se le pasan ya hechas. Un modelo estimando timecodes produce
+  capitulos desplazados, y un capitulo desplazado es peor que no tener
+  capitulos.
+- **Las fuentes** se copian literalmente desde las afirmaciones verificadas.
+  Dejar que el modelo las reescriba abriria la puerta a que cambie una URL, y
+  una fuente mal citada vale menos que ninguna.
+
+Las miniaturas son una composicion de Remotion, no un archivo de diseño: asi
+heredan fondo, tipografia y personaje sin que nadie recuerde los valores. El
+cuerpo del titular se ajusta a la longitud del texto, porque con un tamaño
+fijo un titular largo se sale de la miniatura sin avisar.

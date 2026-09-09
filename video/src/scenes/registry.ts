@@ -90,3 +90,47 @@ export function partitionSceneKinds(kinds: readonly string[]): {
 export function describeSceneCatalog(): string {
   return SCENE_KINDS.map((kind) => `- ${kind}: ${SCENE_REGISTRY[kind].description}`).join('\n');
 }
+
+
+/**
+ * Resuelve una escena del storyboard a su componente y sus props validadas.
+ *
+ * Aqui vive el UNICO cast del registro, y esta contenido a proposito.
+ * TypeScript no puede correlacionar `schema` y `component` dentro de una
+ * union: sabe que cada entrada empareja los suyos, pero al indexar por una
+ * clave variable pierde el vinculo y exige que las props valgan para todos
+ * los componentes a la vez.
+ *
+ * El emparejamiento lo garantiza la propia forma del registro (cada entrada
+ * declara los dos juntos), asi que el cast es seguro mientras nadie escriba
+ * una entrada con el schema de una escena y el componente de otra. Que este
+ * en un solo sitio es lo que hace revisable esa condicion.
+ */
+export function resolveScene(
+  kind: string,
+  props: unknown,
+):
+  | { ok: true; Component: ComponentType<Record<string, unknown>>; props: Record<string, unknown> }
+  | { ok: false; reason: string } {
+  if (!isKnownScene(kind)) {
+    return { ok: false, reason: 'no existe en el catalogo de escenas' };
+  }
+
+  const entry = SCENE_REGISTRY[kind];
+  const parsed = entry.schema.safeParse(props ?? {});
+
+  if (!parsed.success) {
+    return {
+      ok: false,
+      reason: parsed.error.issues
+        .map((issue) => `${issue.path.join('.') || 'props'}: ${issue.message}`)
+        .join('; '),
+    };
+  }
+
+  return {
+    ok: true,
+    Component: entry.component as ComponentType<Record<string, unknown>>,
+    props: parsed.data as Record<string, unknown>,
+  };
+}

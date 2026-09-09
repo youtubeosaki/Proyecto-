@@ -1,0 +1,9 @@
+{
+  "titles": [
+    { "strategy": "mecanismo", "text": "Como se garantiza que un mensaje no se pierda", "reasoning": "Gana busqueda a largo plazo, pero no tiene gancho propio." },
+    { "strategy": "contradiccion", "text": "Tu telefono manda el mismo mensaje dos veces", "reasoning": "Choca con lo que casi todo el mundo asume. Arriesga sonar a fallo en vez de a diseño." },
+    { "strategy": "pregunta", "text": "Por que el primer check no significa lo que crees", "reasoning": "Apela a un elemento de interfaz que todos han visto. Depende de que el video lo resuelva pronto." },
+    { "strategy": "numero", "text": "Tres confirmaciones para un solo mensaje", "reasoning": "Cifra concreta y facil de recordar. Menos busqueda que el mecanismo." },
+    { "strategy": "recomendado", "text": "Por que tu telefono manda el mismo mensaje varias veces", "reasoning": "Combina la contradiccion con suficiente contexto para no leerse como un reporte de fallo." }
+  ]
+}

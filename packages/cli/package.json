@@ -16,6 +16,8 @@
     "@osaki/llm": "workspace:*",
     "@osaki/ingest": "workspace:*",
     "@osaki/research": "workspace:*",
-    "@osaki/script": "workspace:*"
+    "@osaki/script": "workspace:*",
+    "@osaki/compose": "workspace:*",
+    "@osaki/voice": "workspace:*"
   }
 }
