@@ -1,0 +1,560 @@
+{
+  "name": "Osaki 02 — Produccion",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Osaki — nuevo video",
+        "formDescription": "Escribe el tema. El pipeline investiga, verifica fuentes y te trae tres angulos.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Tema del video",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "form-inicio",
+      "name": "Tema del video",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        -720,
+        0
+      ],
+      "webhookId": "osaki-nuevo-video",
+      "notes": "Arranca a mano y a proposito. Un canal que publica solo no es un canal: es una granja de contenido."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:4599/videos",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 1800000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ title: $json[\"Tema del video\"] }) }}"
+      },
+      "id": "crear",
+      "name": "Crear video",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -500,
+        0
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "osaki-token",
+          "name": "Osaki"
+        }
+      },
+      "notes": "Crea el registro y devuelve su id, que arrastra el resto del flujo."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:4599/videos/{{ $('Crear video').item.json.video.id }}/stages/research",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 1800000
+        }
+      },
+      "id": "research",
+      "name": "Investigar y verificar",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -280,
+        0
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "osaki-token",
+          "name": "Osaki"
+        }
+      },
+      "notes": "El nucleo. Si no reune el minimo de afirmaciones verificadas, esta llamada falla y el flujo se para aqui. Es lo correcto: el tema no daba."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:4599/videos/{{ $('Crear video').item.json.video.id }}/stages/angles",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 1800000
+        }
+      },
+      "id": "angles",
+      "name": "Proponer 3 angulos",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -60,
+        0
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "osaki-token",
+          "name": "Osaki"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "http://host.docker.internal:4599/videos/{{ $('Crear video').item.json.video.id }}/angles",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 1800000
+        }
+      },
+      "id": "leer-angulos",
+      "name": "Leer angulos",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        160,
+        0
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "osaki-token",
+          "name": "Osaki"
+        }
+      },
+      "notes": "Se leen para pintarlos en el formulario de aprobacion."
+    },
+    {
+      "parameters": {
+        "resume": "form",
+        "formTitle": "APROBACION #1 — elige el angulo",
+        "formDescription": "={{ $json.angles.map(a => `[${a.id}] ${a.title}\\n   Gancho: ${a.hook}\\n   Tesis: ${a.thesis}\\n   Por que funciona: ${a.whyThisWorks}\\n`).join('\\n') }}",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Angulo",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "a1"
+                  },
+                  {
+                    "option": "a2"
+                  },
+                  {
+                    "option": "a3"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Notas",
+              "fieldType": "textarea"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "gate-1",
+      "name": "GATE 1 — Aprobar angulo",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        380,
+        0
+      ],
+      "webhookId": "osaki-gate-angulo",
+      "notes": "APROBACION HUMANA #1. La ejecucion queda SUSPENDIDA aqui hasta que envies el formulario. Nada del grafo posterior puede correr antes."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:4599/videos/{{ $('Crear video').item.json.video.id }}/choose",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 1800000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ angleId: $json[\"Angulo\"], notes: $json[\"Notas\"] }) }}"
+      },
+      "id": "choose",
+      "name": "Registrar eleccion",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        600,
+        0
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "osaki-token",
+          "name": "Osaki"
+        }
+      },
+      "notes": "Tu eleccion queda registrada junto a las alternativas que habia. Es la evidencia de aporte creativo humano."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:4599/videos/{{ $('Crear video').item.json.video.id }}/stages/script",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 1800000
+        }
+      },
+      "id": "script",
+      "name": "Escribir guion",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        820,
+        0
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "osaki-token",
+          "name": "Osaki"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:4599/videos/{{ $('Crear video').item.json.video.id }}/stages/storyboard",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 1800000
+        }
+      },
+      "id": "storyboard",
+      "name": "Storyboard",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1040,
+        0
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "osaki-token",
+          "name": "Osaki"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:4599/videos/{{ $('Crear video').item.json.video.id }}/stages/audio",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 1800000
+        }
+      },
+      "id": "audio",
+      "name": "Audio y timing",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1260,
+        0
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "osaki-token",
+          "name": "Osaki"
+        }
+      },
+      "notes": "Devuelve 409 si faltan grabaciones: no es un fallo, es el pipeline esperandote."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:4599/videos/{{ $('Crear video').item.json.video.id }}/stages/render",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 1800000
+        }
+      },
+      "id": "render",
+      "name": "Render",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1480,
+        0
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "osaki-token",
+          "name": "Osaki"
+        }
+      },
+      "notes": "Puede tardar bastante: un video de diez minutos son miles de frames."
+    },
+    {
+      "parameters": {
+        "resume": "form",
+        "formTitle": "APROBACION #2 — revisa el render",
+        "formDescription": "=Revisa el video antes de que exista ninguna subida:\n\nhttp://localhost:4599/videos/{{ $('Crear video').item.json.video.id }}/render?token=PON_AQUI_TU_TOKEN\n\nSolo si lo apruebas se habilita la publicacion.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Decision",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "approved"
+                  },
+                  {
+                    "option": "rejected"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Notas",
+              "fieldType": "textarea"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "gate-2",
+      "name": "GATE 2 — Aprobar render",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1700,
+        0
+      ],
+      "webhookId": "osaki-gate-render",
+      "notes": "APROBACION HUMANA #2. En este grafo NO existe ningun nodo de subida antes de este punto. La restriccion es topologica, no una condicion."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:4599/videos/{{ $('Crear video').item.json.video.id }}/approve",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 1800000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ gate: \"render\", decision: $json[\"Decision\"], notes: $json[\"Notas\"] }) }}"
+      },
+      "id": "approve",
+      "name": "Registrar decision",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1920,
+        0
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "osaki-token",
+          "name": "Osaki"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:4599/videos/{{ $('Crear video').item.json.video.id }}/stages/packaging",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 1800000
+        }
+      },
+      "id": "packaging",
+      "name": "Empaquetar",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2140,
+        0
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "osaki-token",
+          "name": "Osaki"
+        }
+      },
+      "notes": "Titulos, descripcion con capitulos y fuentes, tags y miniaturas."
+    }
+  ],
+  "connections": {
+    "Tema del video": {
+      "main": [
+        [
+          {
+            "node": "Crear video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crear video": {
+      "main": [
+        [
+          {
+            "node": "Investigar y verificar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Investigar y verificar": {
+      "main": [
+        [
+          {
+            "node": "Proponer 3 angulos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Proponer 3 angulos": {
+      "main": [
+        [
+          {
+            "node": "Leer angulos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer angulos": {
+      "main": [
+        [
+          {
+            "node": "GATE 1 — Aprobar angulo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GATE 1 — Aprobar angulo": {
+      "main": [
+        [
+          {
+            "node": "Registrar eleccion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar eleccion": {
+      "main": [
+        [
+          {
+            "node": "Escribir guion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Escribir guion": {
+      "main": [
+        [
+          {
+            "node": "Storyboard",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Storyboard": {
+      "main": [
+        [
+          {
+            "node": "Audio y timing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Audio y timing": {
+      "main": [
+        [
+          {
+            "node": "Render",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Render": {
+      "main": [
+        [
+          {
+            "node": "GATE 2 — Aprobar render",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GATE 2 — Aprobar render": {
+      "main": [
+        [
+          {
+            "node": "Registrar decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar decision": {
+      "main": [
+        [
+          {
+            "node": "Empaquetar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "tags": [
+    {
+      "name": "osaki"
+    }
+  ]
+}

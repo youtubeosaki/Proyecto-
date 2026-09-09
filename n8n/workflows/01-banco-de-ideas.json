@@ -1,0 +1,58 @@
+{
+  "name": "Osaki 01 — Banco de ideas",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            { "field": "weeks", "triggerAtDay": [1], "triggerAtHour": 8 }
+          ]
+        }
+      },
+      "id": "trigger-semanal",
+      "name": "Lunes a las 8:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-320, 0],
+      "notes": "Una vez por semana basta: el objetivo es un video semanal y los blogs de ingenieria no publican a diario."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:4599/stages/ideas",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": { "timeout": 600000 }
+      },
+      "id": "ingesta",
+      "name": "Ingerir y puntuar ideas",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-100, 0],
+      "credentials": { "httpHeaderAuth": { "id": "osaki-token", "name": "Osaki" } },
+      "notes": "Timeout alto: recorre ocho feeds y puntua el lote con el modelo."
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "http://host.docker.internal:4599/videos",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "id": "estado",
+      "name": "Estado actual",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [120, 0],
+      "credentials": { "httpHeaderAuth": { "id": "osaki-token", "name": "Osaki" } }
+    }
+  ],
+  "connections": {
+    "Lunes a las 8:00": { "main": [[{ "node": "Ingerir y puntuar ideas", "type": "main", "index": 0 }]] },
+    "Ingerir y puntuar ideas": { "main": [[{ "node": "Estado actual", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "pinData": {},
+  "tags": [{ "name": "osaki" }]
+}

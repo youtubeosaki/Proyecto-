@@ -41,6 +41,9 @@ importers:
       '@osaki/script':
         specifier: workspace:*
         version: link:../script
+      '@osaki/server':
+        specifier: workspace:*
+        version: link:../server
       '@osaki/voice':
         specifier: workspace:*
         version: link:../voice
@@ -147,6 +150,18 @@ importers:
       zod:
         specifier: ^3.24.1
         version: 3.25.76
+
+  packages/server:
+    dependencies:
+      '@osaki/core':
+        specifier: workspace:*
+        version: link:../core
+      '@osaki/db':
+        specifier: workspace:*
+        version: link:../db
+      '@osaki/script':
+        specifier: workspace:*
+        version: link:../script
 
   packages/voice:
     dependencies:

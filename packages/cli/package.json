@@ -18,6 +18,7 @@
     "@osaki/research": "workspace:*",
     "@osaki/script": "workspace:*",
     "@osaki/compose": "workspace:*",
-    "@osaki/voice": "workspace:*"
+    "@osaki/voice": "workspace:*",
+    "@osaki/server": "workspace:*"
   }
 }

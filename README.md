@@ -31,7 +31,9 @@ restriccion es estructural.
 - **Fase 3 — completa.** Storyboard, narracion por segmentos, timing contra
   el audio real, render de la composicion generada, y empaque con titulos,
   descripcion, capitulos, fuentes, tags y miniaturas.
-- Fase 4 — n8n orquestando, con las aprobaciones humanas.
+- **Fase 4 — completa.** Puente HTTP, workflows de n8n con los dos gates
+  como nodos del grafo, y un comprobador que verifica que no se pueden
+  saltar.
 - Fase 5 — subida, Shorts y bucle de analitica.
 
 ## Arranque (PowerShell)
@@ -95,6 +97,7 @@ packages/research Investigacion + verificacion de fuentes
 packages/script   Angulos, guion y parser de marcas de escena
 packages/voice    Interfaz de voz: tu grabacion o TTS local
 packages/compose  Storyboard, timing contra el audio y render
+packages/server   Puente HTTP entre n8n y el pipeline
 packages/cli      Binario `osaki`
 video/            Proyecto de Remotion: tema, componentes, composiciones
 prompts/          Prompts versionados, nunca embebidos en codigo
@@ -397,3 +400,61 @@ Las miniaturas son una composicion de Remotion, no un archivo de diseño: asi
 heredan fondo, tipografia y personaje sin que nadie recuerde los valores. El
 cuerpo del titular se ajusta a la longitud del texto, porque con un tamaño
 fijo un titular largo se sale de la miniatura sin avisar.
+
+## Fase 4: n8n orquestando
+
+```powershell
+docker compose -f docker/docker-compose.yml up -d   # n8n en localhost:5678
+pnpm osaki serve                                    # el puente, en otra terminal
+```
+
+Importa los workflows de `n8n/workflows/` desde el panel y crea una
+credencial **Header Auth** llamada `Osaki` con `x-osaki-token` y el valor de
+tu `N8N_WEBHOOK_TOKEN`.
+
+### Por que un puente HTTP y no "Execute Command"
+
+n8n corre dentro de Docker. Un nodo Execute Command ejecutaria **dentro del
+contenedor**, donde no hay repositorio, ni Remotion, ni ffmpeg, ni tus
+grabaciones. El puente corre en tu Windows, que es donde vive todo eso, y n8n
+lo llama en `http://host.docker.internal:4599`.
+
+Para que el contenedor llegue, el servidor escucha en `0.0.0.0` y no en
+`127.0.0.1`, lo que lo deja visible en la red local. Por eso exige un token
+compartido y **se niega a arrancar sin el**: un endpoint que dispara renders y
+aprueba publicaciones no puede quedar abierto porque alguien no leyo la
+documentacion.
+
+Un gate pendiente devuelve **409**, no 500, para que n8n lo distinga de un
+fallo real y ponga el flujo en espera en vez de reintentar.
+
+### Los gates son nodos del grafo
+
+`02-produccion.json` tiene dos nodos **Wait** en modo formulario. No son
+condiciones que se puedan saltar con un flag: n8n **suspende la ejecucion**
+ahi y solo la reanuda cuando envias el formulario.
+
+```
+Tema -> Crear -> Investigar -> Angulos -> [GATE 1] -> Guion -> Storyboard
+     -> Audio -> Render -> [GATE 2] -> Registrar -> Empaquetar
+```
+
+### Y una prueba que lo verifica
+
+El grafo de n8n se edita arrastrando cajas. Es facilisimo mover una arista sin
+darse cuenta de que acaba de saltarse una aprobacion, y el fallo no se nota
+hasta que un video se publica solo.
+
+```powershell
+node tools/check-approval-gates.mjs
+```
+
+Calcula, para cada nodo, el **minimo** numero de aprobaciones que hay en algun
+camino desde un disparador hasta el, y falla si es menor que el que exige la
+etapa. El minimo y no el maximo: basta con que exista UNA ruta que evite la
+aprobacion para que la garantia se rompa.
+
+La primera version de este script se detenia en el primer gate, asi que nunca
+llegaba a mirar lo que hay detras del segundo. Se descubrio conectando a mano
+un nodo de subida que se saltaba el gate 2 y comprobando que el script lo
+dejaba pasar. Una prueba que no falla cuando debe es peor que no tenerla.

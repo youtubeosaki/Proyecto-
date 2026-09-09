@@ -10,6 +10,7 @@ import {
 import { ApprovalRepository, StageRunRepository, VideoRepository, openDatabase } from '@osaki/db';
 import { STAGES, STAGE_LIST } from './stages.js';
 import { assertRenderApproved, runStage } from './runners.js';
+import { startOsakiServer } from '@osaki/server';
 import { chooseAngle, readAngles } from '@osaki/script';
 import { listTopIdeas } from '@osaki/ingest';
 
@@ -26,6 +27,7 @@ Uso:
   osaki choose <a1|a2|a3> --video <id> [--notes "..."]
   osaki approve <gate> --video <id> [--reject] [--notes "..."]
   osaki ideas                       Mejores ideas guardadas
+  osaki serve [--port 4599]         Puente HTTP para n8n
   osaki doctor                      Comprueba la configuracion
 
 Gates de aprobacion humana: angles, render
@@ -113,6 +115,18 @@ async function main(): Promise<void> {
 
       openDatabase();
       console.log('\n  Base de datos abierta y migrada.\n');
+      return;
+    }
+
+    case 'serve': {
+      // El servidor recibe `runStage` inyectado: si lo importara el mismo,
+      // server dependeria de cli y cli de server, y eso no compila.
+      startOsakiServer({
+        port: typeof flags.port === 'string' ? Number(flags.port) : undefined,
+        runStage,
+      });
+      // Deliberadamente sin `return`: el proceso queda vivo escuchando.
+      await new Promise(() => {});
       return;
     }
 
