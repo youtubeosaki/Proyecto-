@@ -168,3 +168,42 @@ contenido tecnico tiene que sostener la narracion sin pedir atencion.
 
 Normalizada a -14 dBFS de pico, y en la composicion suena al 32%. Cuando
 entre la narracion en la Fase 3, esta pista baja otros 6 dB.
+
+## Oki, el personaje del canal
+
+`video/src/components/mascot/` — un cuadrado redondeado con dos ojos, una
+antena descentrada y una sonrisa fija. Seis expresiones, todas construidas
+deformando la misma geometria base.
+
+Esta dibujado **por completo desde codigo**, no como imagen. Eso no es
+capricho: un PNG se degrada al escalar, no se puede animar por partes y, sobre
+todo, no garantiza que dentro de dos años siga siendo exactamente el mismo. Un
+componente parametrico con su geometria congelada si. Y sale gratis en los
+Shorts verticales y en las miniaturas: es el mismo componente a otra escala.
+
+`identity.ts` esta congelado a proposito y explica cada decision. Un espectador
+que vea el video 40 tiene que reconocer al mismo personaje del video 1; si
+alguien cambia un radio, cada video seguira siendo coherente consigo mismo y
+nadie notara el fallo hasta ver dos videos seguidos.
+
+Revisa la identidad de un vistazo con la hoja de contacto:
+
+```powershell
+pnpm --filter @osaki/video exec remotion still src/index.ts MascotSheet out/oki.png --frame=100
+```
+
+Detalles que lo hacen leerse como vivo y no como un icono pegado:
+
+- **Parpadeo determinista.** Intervalo variable entre 70 y 145 frames, con
+  doble parpadeo ocasional. Remotion renderiza frames en paralelo en varios
+  procesos, asi que la aleatoriedad es funcion pura del frame y de una
+  semilla: el mismo frame sale identico lo renderice quien lo renderice.
+- **Respiracion, flotacion y balanceo** con fases derivadas de la semilla,
+  para que dos Okis en pantalla no se muevan al unisono.
+- **La mirada vaga sola** aunque la escena pida una direccion fija.
+- **La antena late mas rapido en `thinking`**, que es el estado que
+  representa trabajo interno.
+
+`OkiCorner` lo coloca en una esquina sobre el contenido, mirando hacia dentro
+del plano. Va fuera de la transformacion de camara del `Frame` para que el
+push-in de la escena no lo arrastre ni lo deforme.

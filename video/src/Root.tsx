@@ -1,6 +1,7 @@
 import type React from 'react';
 import { Composition } from 'remotion';
 import { Demo, DEMO_DURATION_IN_FRAMES } from './compositions/Demo';
+import { MascotSheet, MASCOT_SHEET_DURATION } from './compositions/MascotSheet';
 import { theme } from './theme/index';
 
 /**
@@ -17,6 +18,16 @@ export const RemotionRoot: React.FC = () => (
       id="Demo"
       component={Demo}
       durationInFrames={DEMO_DURATION_IN_FRAMES}
+      fps={theme.timing.fps}
+      width={1920}
+      height={1080}
+    />
+
+    {/* Control de calidad de la identidad, no contenido del canal. */}
+    <Composition
+      id="MascotSheet"
+      component={MascotSheet}
+      durationInFrames={MASCOT_SHEET_DURATION}
       fps={theme.timing.fps}
       width={1920}
       height={1080}

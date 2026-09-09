@@ -8,6 +8,8 @@ import { TitleCard } from '../components/TitleCard';
 import { NetworkDiagram } from '../components/NetworkDiagram';
 import { Timeline } from '../components/Timeline';
 import { Counter } from '../components/Counter';
+import { Oki } from '../components/mascot/Oki';
+import { OkiCorner } from '../components/mascot/OkiCorner';
 import { theme } from '../theme';
 
 /**
@@ -77,11 +79,29 @@ export const Demo: React.FC = () => (
 
     <TransitionSeries>
       <TransitionSeries.Sequence durationInFrames={SCENE_FRAMES[0]}>
-        <TitleCard
-          eyebrow="Prueba de motor"
-          title="Que pasa cuando escribes una URL"
-          subtitle="Cuatro viajes de ida y vuelta antes de que veas un solo pixel."
-        />
+        <AbsoluteFill>
+          <TitleCard
+            eyebrow="Prueba de motor"
+            title="Que pasa cuando escribes una URL"
+            subtitle="Cuatro viajes de ida y vuelta antes de que veas un solo pixel."
+          />
+          {/* Oki presenta. Entra despues del titulo para no competir con el
+              texto en el unico momento en que el texto es el mensaje. */}
+          <AbsoluteFill
+            style={{
+              display: 'flex',
+              flexDirection: 'row',
+              // Abajo a la derecha: el titulo llega casi al borde derecho y
+              // centrado verticalmente Oki le comia la ultima palabra.
+              alignItems: 'flex-end',
+              justifyContent: 'flex-end',
+              paddingRight: 150,
+              paddingBottom: 70,
+            }}
+          >
+            <Oki expression="curious" size={285} startFrame={s(1.4)} seed={2} gazeX={-0.5} gazeY={-0.3} />
+          </AbsoluteFill>
+        </AbsoluteFill>
       </TransitionSeries.Sequence>
 
       {/* Del titulo al diagrama: empuja hacia arriba, como pasar de pagina. */}
@@ -114,6 +134,7 @@ export const Demo: React.FC = () => (
             { from: 'browser', to: 'server', label: 'ACK + ClientHello', startFrame: s(7.2), durationInFrames: s(1.2), tone: 'accent', drops: false },
           ]}
         />
+        <OkiCorner expression="focused" startFrame={s(2)} seed={5} size={150} />
       </TransitionSeries.Sequence>
 
       {/* Del diagrama a la cronologia: barrido lateral, el gesto del tiempo. */}
@@ -152,6 +173,8 @@ export const Demo: React.FC = () => (
           durationInFrames={s(1.8)}
           footnote="RFC 8446, seccion 2: el handshake completo de TLS 1.3 se cierra en un unico round trip."
         />
+        {/* Reacciona justo cuando el contador aterriza en 1. */}
+        <OkiCorner expression="surprised" corner="bottom-left" startFrame={s(2.2)} seed={8} size={160} />
       </TransitionSeries.Sequence>
     </TransitionSeries>
 
