@@ -20,17 +20,52 @@ const STOP_WORDS = new Set([
   'como', 'que', 'se', 'su', 'sus', 'lo',
 ]);
 
-export function normalizeTitle(title: string): string {
-  return title
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase()
-    .replace(/[\u0300-\u036f]/g, '')
-    .split(/\s+/)
-    .filter((word) => word.length > 1 && !STOP_WORDS.has(word))
-    .sort()
-    .join(' ');
+/**
+ * Recorta terminaciones flexivas comunes.
+ *
+ * Sin esto, "How Discord STORES billions of messages" y "Discord: STORING
+ * billions of messages" producen claves distintas y el mismo tema entra dos
+ * veces. Es el caso normal, no el raro: el blog original y el hilo de Hacker
+ * News casi nunca titulan igual.
+ *
+ * Deliberadamente crudo. Un lematizador de verdad seria una dependencia y un
+ * modelo linguistico para resolver un problema que aqui es de titulares
+ * cortos y vocabulario tecnico. El riesgo de recortar de mas es unir dos
+ * temas distintos, y en este dominio eso casi no pasa.
+ */
+function stem(word: string): string {
+  // El orden importa: 'ing' antes que 's', o "storing" acabaria en "storin".
+  const suffixes = ['iendo', 'ando', 'ing', 'ed', 'es', 's'];
+
+  for (const suffix of suffixes) {
+    if (word.length > suffix.length + 3 && word.endsWith(suffix)) {
+      return word.slice(0, -suffix.length);
+    }
+  }
+
+  return word;
 }
+
+export function normalizeTitle(title: string): string {
+  return (
+    title
+      // Separa los acentos de su letra para poder quitarlos: asi "replicacion"
+      // y "replicación" producen la misma clave.
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      // Fuera puntuacion. Sin esto, "Discord:" y "Discord" son palabras
+      // distintas y el mismo tema entra dos veces.
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .split(/\s+/)
+      .filter((word) => word.length > 1 && !STOP_WORDS.has(word))
+      .map(stem)
+      // Ordenadas: el orden de las palabras en un titular no cambia el tema.
+      .sort()
+      .join(' ')
+  );
+}
+
 
 export function dedupeKeyFor(title: string): string {
   return createHash('sha1').update(normalizeTitle(title)).digest('hex').slice(0, 16);

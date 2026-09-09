@@ -11,7 +11,10 @@
     "typecheck": "pnpm -r exec tsc --noEmit",
     "osaki": "pnpm --filter @osaki/cli exec tsx src/index.ts",
     "studio": "pnpm --filter @osaki/video exec remotion studio src/index.ts",
-    "render:demo": "pnpm --filter @osaki/video exec remotion render src/index.ts Demo out/demo.mp4"
+    "render:demo": "pnpm --filter @osaki/video exec remotion render src/index.ts Demo out/demo.mp4",
+    "test": "pnpm build && node --test \"tests/*.test.mjs\" && node tools/check-approval-gates.mjs",
+    "setup": "node tools/setup.mjs",
+    "render:short": "pnpm --filter @osaki/video exec remotion render src/index.ts Short"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

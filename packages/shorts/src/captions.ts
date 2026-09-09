@@ -66,7 +66,37 @@ export function splitIntoLines(text: string, maxChars = MAX_CHARS): string[] {
   }
 
   if (current) lines.push(current);
-  return lines;
+
+  return mergeOrphans(lines, maxChars);
+}
+
+/**
+ * Une los fragmentos huerfanos con la linea anterior.
+ *
+ * Cortar siempre tras puntuacion fuerte evita que un subtitulo empiece a
+ * media oracion, pero produce el problema opuesto: "interesante:" solo en
+ * pantalla durante medio segundo. Un fragmento de dos palabras no da tiempo
+ * ni a leerlo y ademas rompe el ritmo.
+ *
+ * Se permite superar `maxChars` hasta un 25% al unir, porque una linea algo
+ * larga se lee mejor que una linea suelta de dos palabras.
+ */
+function mergeOrphans(lines: readonly string[], maxChars: number): string[] {
+  const hardMax = Math.round(maxChars * 1.25);
+  const merged: string[] = [];
+
+  for (const line of lines) {
+    const previous = merged[merged.length - 1];
+    const isOrphan = line.length < maxChars * 0.45;
+
+    if (previous && isOrphan && previous.length + line.length + 1 <= hardMax) {
+      merged[merged.length - 1] = `${previous} ${line}`;
+    } else {
+      merged.push(line);
+    }
+  }
+
+  return merged;
 }
 
 /**

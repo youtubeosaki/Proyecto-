@@ -99,74 +99,71 @@ async function main(): Promise<void> {
     }
 
     case 'doctor': {
-      console.log('\nConfiguracion:\n');
-      console.log(`  proveedor LLM       ${config.LLM_PROVIDER}`);
-      console.log(`  modelo principal    ${config.LLM_MODEL_PRIMARY}`);
-      console.log(`  modelo utilitario   ${config.LLM_MODEL_UTILITY}`);
-      console.log(`  clave de API        ${config.ANTHROPIC_API_KEY ? 'presente' : 'ausente'}`);
-      console.log(`  proveedor de voz    ${config.VOICE_PROVIDER}`);
-      console.log(`  claims sin fuente   ${config.UNVERIFIED_CLAIMS_POLICY}`);
-      console.log(`  base de datos       ${config.paths.database}`);
+      /**
+       * Diagnostico en lenguaje llano.
+       *
+       * Un `doctor` que vuelca variables de entorno solo sirve a quien ya
+       * sabe que significan. Este dice, para cada cosa, si funciona y que
+       * hacer si no. Es la primera parada cuando algo falla.
+       */
+      const linea = (estado: 'ok' | 'aviso' | 'falta', texto: string, nota?: string) => {
+        const marca = estado === 'ok' ? '  OK   ' : estado === 'aviso' ? '  ..   ' : '  FALTA';
+        console.log(`${marca} ${texto}`);
+        if (nota) console.log(`         ${nota}`);
+      };
 
-      if (config.LLM_PROVIDER === 'api' && !config.ANTHROPIC_API_KEY) {
-        console.log('\n  AVISO: LLM_PROVIDER=api pero ANTHROPIC_API_KEY esta vacia.');
-        console.log('  Usa LLM_PROVIDER=manual para trabajar con tu suscripcion de claude.ai.');
+      console.log('\nRevisando la configuracion\n');
+
+      // --- Guiones
+      if (config.LLM_PROVIDER === 'mock') {
+        linea('ok', 'Guiones: modo prueba (mock)', 'Lee respuestas de ejemplo. No gasta nada.');
+      } else if (config.LLM_PROVIDER === 'manual') {
+        linea('ok', 'Guiones: modo manual', 'Copias y pegas en claude.ai. No gasta creditos de API.');
+      } else if (config.ANTHROPIC_API_KEY) {
+        linea('ok', `Guiones: API de Anthropic (${config.LLM_MODEL_PRIMARY})`);
+      } else {
+        linea('falta', 'Guiones: pusiste LLM_PROVIDER=api pero no hay clave', 'Rellena ANTHROPIC_API_KEY en .env, o pon LLM_PROVIDER=manual.');
       }
 
-      openDatabase();
-      console.log('\n  Base de datos abierta y migrada.\n');
-      return;
-    }
-
-    case 'serve': {
-      // El servidor recibe `runStage` inyectado: si lo importara el mismo,
-      // server dependeria de cli y cli de server, y eso no compila.
-      startOsakiServer({
-        port: typeof flags.port === 'string' ? Number(flags.port) : undefined,
-        runStage,
-      });
-      // Deliberadamente sin `return`: el proceso queda vivo escuchando.
-      await new Promise(() => {});
-      return;
-    }
-
-    case 'ideas': {
-      const ideas = listTopIdeas(20);
-      if (ideas.length === 0) {
-        console.log('\n  El banco esta vacio. Llenalo con:  pnpm osaki run ideas\n');
-        return;
+      // --- Voz
+      if (config.VOICE_PROVIDER === 'file') {
+        linea('ok', 'Voz: tu grabacion', 'Deja los WAV en data/audio/<id>/. La etapa te dice cuales faltan.');
+      } else if (config.VOICE_PROVIDER === 'piper') {
+        if (config.PIPER_VOICE_MODEL) linea('ok', 'Voz: Piper (local, gratis)');
+        else linea('falta', 'Voz: Piper sin modelo', 'Rellena PIPER_VOICE_MODEL con la ruta al archivo .onnx.');
+      } else {
+        linea('aviso', 'Voz: ElevenLabs', 'Todavia no esta implementado. Usa "file" o "piper".');
       }
-      console.log('\n  SCORE  TITULO');
-      for (const idea of ideas) {
-        console.log(`  ${(idea.compositeScore ?? 0).toFixed(2).padStart(5)}  ${idea.title}`);
+
+      // --- Verificacion de fuentes
+      linea(
+        'ok',
+        `Fuentes: las no verificadas se ${config.UNVERIFIED_CLAIMS_POLICY === 'exclude' ? 'DESCARTAN' : 'marcan'}`,
+        `Minimo para dejar avanzar un tema: ${config.MIN_VERIFIED_CLAIMS} afirmaciones verificadas.`,
+      );
+
+      // --- Publicacion
+      if (config.YOUTUBE_REFRESH_TOKEN) {
+        linea('ok', `YouTube: configurado, sube como ${config.YOUTUBE_DEFAULT_PRIVACY.toUpperCase()}`);
+      } else {
+        linea('aviso', 'YouTube: sin configurar', 'Todo funciona menos la etapa de publicar.');
       }
-      console.log('');
-      return;
-    }
 
-    case 'choose': {
-      const angleId = positional[0];
-      if (!angleId) throw new OsakiError('Uso: osaki choose <a1|a2|a3> --video <id>');
+      // --- Puente para n8n
+      if (config.N8N_WEBHOOK_TOKEN) linea('ok', 'Puente para n8n: token puesto');
+      else linea('falta', 'Puente para n8n: sin token', 'Ejecuta "pnpm setup" y se genera solo.');
 
-      const videoId = requireVideoId(flags);
-      const notes = typeof flags.notes === 'string' ? flags.notes : undefined;
+      // --- Base de datos
+      try {
+        const db = openDatabase();
+        const total = (db.prepare('SELECT COUNT(*) AS n FROM videos').get() as { n: number }).n;
+        const ideas = (db.prepare('SELECT COUNT(*) AS n FROM ideas').get() as { n: number }).n;
+        linea('ok', `Base de datos: ${total} video(s), ${ideas} idea(s)`, config.paths.database);
+      } catch (error) {
+        linea('falta', 'Base de datos: no se pudo abrir', error instanceof Error ? error.message : '');
+      }
 
-      const updated = chooseAngle(videoId, angleId, notes);
-      const chosen = updated.angles.find((angle) => angle.id === angleId)!;
-
-      // La eleccion ES la aprobacion del gate #1: queda registrada con las
-      // alternativas que habia sobre la mesa.
-      new ApprovalRepository(openDatabase()).record({
-        videoId,
-        gate: 'angles',
-        decision: 'approved',
-        notes,
-        edited: { chosenAngleId: angleId, alternatives: updated.angles.map((angle) => angle.id) },
-      });
-
-      console.log(`\n  Angulo elegido: ${chosen.title}`);
-      if (notes) console.log(`  Tus notas: ${notes}`);
-      console.log(`\n  Siguiente:  pnpm osaki run script --video ${videoId}\n`);
+      console.log('\nSiguiente paso:  pnpm osaki new "<el tema de tu video>"\n');
       return;
     }
 

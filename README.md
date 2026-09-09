@@ -37,14 +37,17 @@ restriccion es estructural.
 - **Fase 5 — completa.** Subida a YouTube en privado con carga reanudable,
   Shorts verticales con subtitulos quemados, y bucle de analitica.
 
+> **¿Primera vez aquí? Lee [EMPIEZA-AQUI.md](EMPIEZA-AQUI.md).**
+> Es la guía paso a paso, en español llano y sin jerga. Este README explica
+> las decisiones de diseño; la guía explica cómo usarlo.
+
 ## Arranque (PowerShell)
 
 ```powershell
 pnpm install
-Copy-Item .env.example .env
-
-# Comprueba la configuracion y crea la base de datos
-pnpm osaki doctor
+pnpm setup      # crea .env, genera el token y prepara la base
+pnpm build
+pnpm test       # comprueba que nada esta roto
 
 # Renderiza el video de prueba de 30 segundos
 pnpm render:demo
