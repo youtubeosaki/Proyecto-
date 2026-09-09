@@ -9,7 +9,7 @@ import { NetworkDiagram } from '../components/NetworkDiagram';
 import { Timeline } from '../components/Timeline';
 import { Counter } from '../components/Counter';
 import { Oki } from '../components/mascot/Oki';
-import { OkiCorner } from '../components/mascot/OkiCorner';
+import { OkiStage } from '../components/mascot/OkiStage';
 import { theme } from '../theme';
 
 /**
@@ -95,11 +95,11 @@ export const Demo: React.FC = () => (
               // centrado verticalmente Oki le comia la ultima palabra.
               alignItems: 'flex-end',
               justifyContent: 'flex-end',
-              paddingRight: 150,
-              paddingBottom: 70,
+              paddingRight: 110,
+              paddingBottom: 30,
             }}
           >
-            <Oki expression="curious" size={285} startFrame={s(1.4)} seed={2} gazeX={-0.5} gazeY={-0.3} />
+            <Oki expression="curious" size={430} startFrame={s(1.2)} seed={2} gazeX={-0.55} gazeY={-0.25} />
           </AbsoluteFill>
         </AbsoluteFill>
       </TransitionSeries.Sequence>
@@ -133,8 +133,23 @@ export const Demo: React.FC = () => (
             { from: 'server', to: 'browser', label: 'SYN-ACK', startFrame: s(5.8), durationInFrames: s(1.2), tone: 'ok', drops: false },
             { from: 'browser', to: 'server', label: 'ACK + ClientHello', startFrame: s(7.2), durationInFrames: s(1.2), tone: 'accent', drops: false },
           ]}
+          guide={{
+            size: 240,
+            seed: 5,
+            beats: [
+              // Arranca junto al navegador y señala quien hace la pregunta.
+              { atFrame: s(0.4), atNode: 'browser', lookAtNode: 'browser', point: true, expression: 'curious' },
+              // Sube a ver como responde el resolver.
+              { atFrame: s(2.4), atNode: 'resolver', lookAtNode: 'resolver', point: true, expression: 'focused', travelFrames: s(0.8) },
+              // Acompaña a la respuesta de vuelta al navegador.
+              { atFrame: s(3.9), followPacket: 1, lookAtPacket: 1, expression: 'happy', travelFrames: s(0.5) },
+              // Cruza el plano siguiendo al SYN hasta el servidor.
+              { atFrame: s(5.5), followPacket: 2, lookAtPacket: 2, expression: 'focused', travelFrames: s(0.6) },
+              // Se planta junto al servidor y lo señala: aqui termina el viaje.
+              { atFrame: s(7.4), atNode: 'server', lookAtNode: 'server', point: true, expression: 'surprised', travelFrames: s(0.7) },
+            ],
+          }}
         />
-        <OkiCorner expression="focused" startFrame={s(2)} seed={5} size={150} />
       </TransitionSeries.Sequence>
 
       {/* Del diagrama a la cronologia: barrido lateral, el gesto del tiempo. */}
@@ -173,8 +188,40 @@ export const Demo: React.FC = () => (
           durationInFrames={s(1.8)}
           footnote="RFC 8446, seccion 2: el handshake completo de TLS 1.3 se cierra en un unico round trip."
         />
-        {/* Reacciona justo cuando el contador aterriza en 1. */}
-        <OkiCorner expression="surprised" corner="bottom-left" startFrame={s(2.2)} seed={8} size={160} />
+        {/* Reacciona y señala hacia el numero justo cuando aterriza en 1. */}
+        <AbsoluteFill style={{ pointerEvents: 'none' }}>
+          <OkiStage
+            width={1920}
+            height={1080}
+            size={272}
+            seed={8}
+            beats={[
+              {
+                atFrame: s(0.2),
+                position: { x: 300, y: 560 },
+                lookAt: { x: 900, y: 500 },
+                expression: 'thinking',
+              },
+              {
+                // Señala al hueco bajo el numero, no al numero: el anillo
+                // encima de la cifra la parte por la mitad y deja de leerse.
+                atFrame: s(2.4),
+                position: { x: 330, y: 520 },
+                lookAt: { x: 880, y: 600 },
+                pointing: true,
+                expression: 'surprised',
+                travelFrames: s(0.7),
+              },
+              {
+                atFrame: s(4.6),
+                position: { x: 330, y: 520 },
+                lookAt: { x: 880, y: 600 },
+                pointing: true,
+                expression: 'happy',
+              },
+            ]}
+          />
+        </AbsoluteFill>
       </TransitionSeries.Sequence>
     </TransitionSeries>
 

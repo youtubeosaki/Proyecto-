@@ -204,6 +204,46 @@ Detalles que lo hacen leerse como vivo y no como un icono pegado:
 - **La antena late mas rapido en `thinking`**, que es el estado que
   representa trabajo interno.
 
-`OkiCorner` lo coloca en una esquina sobre el contenido, mirando hacia dentro
-del plano. Va fuera de la transformacion de camara del `Frame` para que el
-push-in de la escena no lo arrastre ni lo deforme.
+### Como se mueve e interactua
+
+`OkiStage` lo coloca en COORDENADAS DE LA ESCENA y lo mueve entre puntos, en
+vez de anclarlo a una esquina con CSS. La diferencia no es cosmetica: anclado
+a una esquina, Oki es una pegatina encima del video; con coordenadas puede
+pararse junto a un nodo concreto, acompañar a un paquete mientras viaja y
+señalar lo que se esta narrando.
+
+Una posicion puede ser un punto fijo **o una funcion del frame**. Lo segundo
+es lo que permite seguir a algo que se mueve: el escenario no sabe que es un
+paquete, solo pregunta "donde estas en este frame".
+
+`NetworkDiagram` acepta un `guide` con la coreografia. Los beats referencian
+**nodos y paquetes por su identificador, no coordenadas**:
+
+```tsx
+guide={{
+  size: 240,
+  beats: [
+    { atFrame: s(0.4), atNode: 'browser',  lookAtNode: 'browser', point: true, expression: 'curious' },
+    { atFrame: s(2.4), atNode: 'resolver', lookAtNode: 'resolver', point: true, expression: 'focused' },
+    { atFrame: s(3.9), followPacket: 1, lookAtPacket: 1, expression: 'happy' },
+    { atFrame: s(5.5), followPacket: 2, lookAtPacket: 2, expression: 'focused' },
+    { atFrame: s(7.4), atNode: 'server',   lookAtNode: 'server', point: true, expression: 'surprised' },
+  ],
+}}
+```
+
+Si se mueve un nodo, Oki se mueve con el. Si un paquete cambia de velocidad,
+Oki lo sigue igual. Una coreografia escrita en pixeles se desincroniza al
+primer retoque del diagrama.
+
+Para que el desplazamiento se lea como movimiento y no como deslizamiento:
+acelera y frena entre puntos, rebota mientras camina, se inclina hacia donde
+va (con tope: pasado cierto angulo deja de leerse como impulso y empieza a
+leerse como que se cae) y llega ya con la expresion del destino puesta.
+
+Al señalar lanza un haz de guiones que corre hacia el objetivo y un anillo que
+late sobre el. El anillo cierra el gesto: sin el, el haz apunta a la nada.
+
+Oki vive DENTRO del contenedor del diagrama, asi que comparte la
+transformacion de camara con el resto de la escena. Eso es lo que hace que se
+lea como parte del plano y no como una capa pegada encima.

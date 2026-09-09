@@ -12,6 +12,8 @@ import {
   pulse,
 } from '../theme/motion';
 import { Frame } from './Frame';
+import { OkiStage, type OkiBeat } from './mascot/OkiStage';
+import type { OkiExpression } from './mascot/identity';
 
 /**
  * Diagrama de red: nodos, enlaces y paquetes que viajan.
@@ -47,14 +49,47 @@ const packetSchema = z.object({
   drops: z.boolean().default(false),
 });
 
+/**
+ * Coreografia de Oki dentro del diagrama.
+ *
+ * Los beats referencian NODOS y PAQUETES por su identificador, no coordenadas.
+ * Esa es la pieza que hace que la interaccion sea real: si se mueve un nodo,
+ * Oki se mueve con el, y si un paquete cambia de velocidad, Oki lo sigue
+ * igual. Una coreografia escrita en pixeles se desincroniza al primer
+ * retoque del diagrama.
+ */
+const guideBeatSchema = z.object({
+  atFrame: z.number().int().nonnegative(),
+  /** Junto a que nodo se coloca. */
+  atNode: z.string().optional(),
+  /** O bien acompaña a un paquete mientras viaja, por su indice. */
+  followPacket: z.number().int().nonnegative().optional(),
+  /** A que nodo mira. Si `point`, ademas lo señala. */
+  lookAtNode: z.string().optional(),
+  lookAtPacket: z.number().int().nonnegative().optional(),
+  point: z.boolean().default(false),
+  expression: z
+    .enum(['neutral', 'curious', 'thinking', 'surprised', 'happy', 'focused'])
+    .default('neutral'),
+  travelFrames: z.number().int().positive().optional(),
+});
+
 export const networkDiagramSchema = z.object({
   caption: z.string().optional(),
   nodes: z.array(nodeSchema).min(2),
   links: z.array(z.object({ from: z.string(), to: z.string() })).default([]),
   packets: z.array(packetSchema).default([]),
+  /** Si se omite, el diagrama se dibuja sin personaje. */
+  guide: z
+    .object({
+      size: z.number().positive().default(230),
+      seed: z.number().int().nonnegative().default(4),
+      beats: z.array(guideBeatSchema).min(1),
+    })
+    .optional(),
 });
 
-export type NetworkDiagramProps = z.infer<typeof networkDiagramSchema>;
+export type NetworkDiagramProps = z.input<typeof networkDiagramSchema>;
 
 const NODE_WIDTH = 200;
 const NODE_HEIGHT = 92;
@@ -64,8 +99,9 @@ const TRAIL_LENGTH = 7;
 export const NetworkDiagram: React.FC<NetworkDiagramProps> = ({
   caption,
   nodes,
-  links,
-  packets,
+  links = [],
+  packets = [],
+  guide,
 }) => {
   const frame = useCurrentFrame();
   const { fps, width, height } = useVideoConfig();
@@ -89,28 +125,34 @@ export const NetworkDiagram: React.FC<NetworkDiagramProps> = ({
   } as const;
 
   /**
-   * Estado de cada paquete en este frame. Se calcula una sola vez porque lo
-   * consumen tres capas: estela, cuerpo y etiqueta.
+   * Posicion de un paquete en CUALQUIER frame, no solo en el actual.
+   *
+   * Se extrae como funcion pura porque tiene dos consumidores: el dibujo del
+   * paquete y la coreografia de Oki, que necesita preguntar "donde estara
+   * este paquete" para acompañarlo. Duplicar la formula en los dos sitios
+   * seria la via directa a que se desincronicen.
    */
-  const activePackets = packets.flatMap((packet, index) => {
+  const packetStateAt = (index: number, atFrame: number) => {
+    const packet = packets[index];
+    if (!packet) return null;
+
     const from = byId.get(packet.from);
     const to = byId.get(packet.to);
-    if (!from || !to) return [];
+    if (!from || !to) return null;
 
-    const linear = progressBetween(
-      frame,
-      packet.startFrame,
-      packet.startFrame + packet.durationInFrames,
-    );
-    if (linear <= 0) return [];
+    const duration = packet.durationInFrames ?? 30;
+    const drops = packet.drops ?? false;
 
-    // Acelera al salir y frena al llegar: un paquete a velocidad constante
-    // se lee como un objeto arrastrado, no como algo que se lanza.
+    const linear = progressBetween(atFrame, packet.startFrame, packet.startFrame + duration);
+    if (linear <= 0) return null;
+
+    // Acelera al salir y frena al llegar: un paquete a velocidad constante se
+    // lee como un objeto arrastrado, no como algo que se lanza.
     const travel = easeOutCubic(linear);
 
     const dropPoint = 0.55;
-    const reached = packet.drops ? Math.min(travel, dropPoint) : travel;
-    const lost = packet.drops && travel > dropPoint;
+    const reached = drops ? Math.min(travel, dropPoint) : travel;
+    const lost = drops && travel > dropPoint;
 
     const a = toPx(from);
     const b = toPx(to);
@@ -121,31 +163,93 @@ export const NetworkDiagram: React.FC<NetworkDiagramProps> = ({
         ? Math.max(0, 1 - (travel - 1) * 4)
         : 1;
 
-    if (opacity <= 0) return [];
-
     const at = (p: number) => ({ x: a.x + (b.x - a.x) * p, y: a.y + (b.y - a.y) * p });
-    const head = at(reached);
+
+    return {
+      packet,
+      origin: a,
+      head: at(reached),
+      at,
+      reached,
+      travel,
+      lost,
+      opacity,
+      arrivalFrame: packet.startFrame + duration,
+      color: lost ? theme.color.danger : toneColor[packet.tone ?? 'accent'],
+    };
+  };
+
+  const activePackets = packets.flatMap((packet, index) => {
+    const state = packetStateAt(index, frame);
+    if (!state || state.opacity <= 0) return [];
 
     return [
       {
         key: `${packet.from}-${packet.to}-${index}`,
         label: packet.label,
-        ...head,
+        x: state.head.x,
+        y: state.head.y,
         // Estela: posiciones anteriores del paquete, no una simple linea recta.
         trail: Array.from({ length: TRAIL_LENGTH }, (_, i) => {
-          const back = Math.max(0, reached - (i + 1) * 0.022);
-          return { ...at(back), alpha: (1 - (i + 1) / (TRAIL_LENGTH + 1)) * 0.55 };
+          const back = Math.max(0, state.reached - (i + 1) * 0.022);
+          return { ...state.at(back), alpha: (1 - (i + 1) / (TRAIL_LENGTH + 1)) * 0.55 };
         }),
         // La etiqueta desaparece al llegar: si no, se queda encima del nodo
         // destino y tapa su nombre.
-        showLabel: travel < 0.9,
-        arrivalFrame: packet.startFrame + packet.durationInFrames,
+        showLabel: state.travel < 0.9,
+        arrivalFrame: state.arrivalFrame,
         targetId: packet.to,
-        opacity,
-        color: lost ? theme.color.danger : toneColor[packet.tone],
-        lost,
+        opacity: state.opacity,
+        color: state.color,
+        lost: state.lost,
       },
     ];
+  });
+
+  /**
+   * Traduce la coreografia declarativa a beats del escenario.
+   *
+   * Aqui es donde "junto al nodo resolver" se convierte en coordenadas, y
+   * donde "acompaña al paquete 2" se convierte en una funcion del frame.
+   */
+  const guideBeats: OkiBeat[] = (guide?.beats ?? []).map((beat) => {
+    const size = guide?.size ?? 230;
+    /** Se coloca por debajo del nodo para no taparlo. */
+    const besideNode = (id: string) => {
+      const node = byId.get(id);
+      if (!node) return { x: areaWidth / 2, y: areaHeight / 2 };
+      const point = toPx(node);
+      return { x: point.x, y: point.y + NODE_HEIGHT / 2 + size * 0.44 };
+    };
+
+    const position: OkiBeat['position'] =
+      beat.followPacket !== undefined
+        ? (atFrame: number) => {
+            const state = packetStateAt(beat.followPacket!, atFrame);
+            // Antes de que salga el paquete, espera en su origen.
+            const anchor =
+              state?.head ?? packetStateAt(beat.followPacket!, 0)?.origin ?? { x: areaWidth / 2, y: areaHeight / 2 };
+            return { x: anchor.x, y: anchor.y + size * 0.42 };
+          }
+        : besideNode(beat.atNode ?? nodes[0]!.id);
+
+    let lookAt: OkiBeat['lookAt'];
+    if (beat.lookAtNode) {
+      const node = byId.get(beat.lookAtNode);
+      if (node) lookAt = toPx(node);
+    } else if (beat.lookAtPacket !== undefined) {
+      lookAt = (atFrame: number) =>
+        packetStateAt(beat.lookAtPacket!, atFrame)?.head ?? { x: areaWidth / 2, y: areaHeight / 2 };
+    }
+
+    return {
+      atFrame: beat.atFrame,
+      position,
+      lookAt,
+      pointing: beat.point ?? false,
+      expression: (beat.expression ?? 'neutral') as OkiExpression,
+      travelFrames: beat.travelFrames,
+    };
   });
 
   /** Un nodo destella cuando algo le llega. Da causalidad al diagrama. */
@@ -290,6 +394,20 @@ export const NetworkDiagram: React.FC<NetworkDiagramProps> = ({
             </div>
           );
         })}
+
+        {/* Oki, en el espacio de coordenadas del diagrama. Al vivir aqui
+            dentro comparte la transformacion de camara con el resto de la
+            escena, que es lo que hace que se lea como parte del plano y no
+            como una capa pegada encima. */}
+        {guideBeats.length > 0 ? (
+          <OkiStage
+            width={areaWidth}
+            height={areaHeight}
+            beats={guideBeats}
+            size={guide?.size ?? 230}
+            seed={guide?.seed ?? 4}
+          />
+        ) : null}
 
         {/* Etiquetas de paquete: capa superior, siempre legibles. */}
         {activePackets.map((packet) =>
