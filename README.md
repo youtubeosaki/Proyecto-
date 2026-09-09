@@ -34,7 +34,8 @@ restriccion es estructural.
 - **Fase 4 — completa.** Puente HTTP, workflows de n8n con los dos gates
   como nodos del grafo, y un comprobador que verifica que no se pueden
   saltar.
-- Fase 5 — subida, Shorts y bucle de analitica.
+- **Fase 5 — completa.** Subida a YouTube en privado con carga reanudable,
+  Shorts verticales con subtitulos quemados, y bucle de analitica.
 
 ## Arranque (PowerShell)
 
@@ -98,6 +99,8 @@ packages/script   Angulos, guion y parser de marcas de escena
 packages/voice    Interfaz de voz: tu grabacion o TTS local
 packages/compose  Storyboard, timing contra el audio y render
 packages/server   Puente HTTP entre n8n y el pipeline
+packages/publish  YouTube Data API, cuota y analitica
+packages/shorts   Seleccion de fragmentos y subtitulos
 packages/cli      Binario `osaki`
 video/            Proyecto de Remotion: tema, componentes, composiciones
 prompts/          Prompts versionados, nunca embebidos en codigo
@@ -458,3 +461,65 @@ La primera version de este script se detenia en el primer gate, asi que nunca
 llegaba a mirar lo que hay detras del segundo. Se descubrio conectando a mano
 un nodo de subida que se saltaba el gate 2 y comprobando que el script lo
 dejaba pasar. Una prueba que no falla cuando debe es peor que no tenerla.
+
+## Fase 5: publicacion, Shorts y analitica
+
+```powershell
+pnpm osaki run publish   --video <id>   # sube en PRIVADO
+pnpm osaki run shorts    --video <id>   # 2-3 cortes verticales
+pnpm osaki run analytics --video <id>   # a los 7 dias
+```
+
+### `public` no existe en el codigo
+
+El tipo de privacidad es `'private' | 'unlisted'`. No es un valor por defecto
+que se pueda cambiar: **el pipeline no tiene forma de expresar "publico"**.
+
+Hacer un video publico es una decision que se toma en YouTube Studio, mirando
+el video, despues de haberlo aprobado. Si el pipeline pudiera hacerlo, tarde o
+temprano un bug lo haria.
+
+El gate del render se comprueba en dos sitios: en la CLI, para fallar pronto
+con un mensaje util, y dentro de `runPublishStage`, porque la garantia no
+puede depender de que la CLI sea el unico camino de entrada. Verificado
+llamando a la funcion directamente, saltandose la CLI: sigue bloqueando.
+
+### Subida reanudable y cuota
+
+Los masters pasan de 90 MB. Con subida simple, un corte de red a los ochenta
+megas obliga a empezar de cero; con la reanudable se le pregunta a Google
+cuanto recibio y se sigue desde ahi.
+
+La cuota diaria (10.000 unidades, 1.600 por subida) se contabiliza en SQLite y
+no en memoria, porque el proceso se reinicia y la cuota no. Se **reserva antes**
+de la llamada: al reves, dos operaciones simultaneas pasarian las dos la
+comprobacion y la segunda fallaria en Google, donde el error es opaco y ya se
+gasto el tiempo de subida.
+
+La miniatura va aparte y su fallo no tumba la etapa: el video ya esta subido, y
+reejecutar la etapa lo subiria dos veces.
+
+### Shorts
+
+Los cortes **reutilizan la misma escena** del video largo, sin rediseñarla. Los
+componentes posicionan por porcentaje precisamente para esto: el mismo diagrama
+se reparte sobre el lienzo que le den, sea 16:9 o 9:16. Eso evita tener una
+variante vertical de cada componente que mantener sincronizada.
+
+El modelo puntua cada candidato con una confianza y los que bajan de 0,55 se
+descartan: tres Shorts mediocres hacen mas daño al canal que uno bueno.
+
+**Limitacion conocida de los subtitulos:** no hay marcas de tiempo por palabra,
+porque el audio se mide entero por segmento. El reparto es proporcional a los
+caracteres, que aproxima bien en narracion continua y se desvia con pausas
+largas. Si hiciera falta precision real, la via es whisper.cpp con marcas por
+palabra sobre el WAV ya grabado. Prefiero una aproximacion documentada a una
+precision fingida.
+
+### El bucle de retorno
+
+A los siete dias se leen visualizaciones, CTR, duracion media y retencion a
+30 s, y se guardan. `channelLearnings()` devuelve los que mejor y peor
+funcionaron para inyectarlos en el prompt de scoring: no una media, que no dice
+nada accionable, sino "estos engancharon y estos no", que es lo que calibra al
+modelo sobre este canal en concreto.
