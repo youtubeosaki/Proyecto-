@@ -24,7 +24,8 @@ restriccion es estructural.
 ## Estado
 
 - **Fase 1 — completa.** Monorepo, configuracion, estado en SQLite, CLI por
-  etapas, motor de Remotion con 6 componentes y un video de prueba renderizado.
+  etapas, motor de Remotion con 6 componentes, sistema de movimiento continuo,
+  transiciones, cama sonora generada y un video de prueba renderizado.
 - Fase 2 — investigacion y guion via Claude, con verificacion de fuentes.
 - Fase 3 — audio, timing y render end-to-end.
 - Fase 4 — n8n orquestando, con las aprobaciones humanas.
@@ -82,6 +83,7 @@ la etapa lee el artefacto de la anterior desde disco y sigue desde ahi.
 ## Estructura
 
 ```
+tools/            Generador de la cama sonora ambiental
 packages/core     Config, errores tipados, reintentos con backoff, tipos de dominio
 packages/db       SQLite: videos, etapas, aprobaciones, afirmaciones, analitica
 packages/llm      Interfaz de LLM + 3 adaptadores + cargador de prompts
@@ -110,3 +112,59 @@ contenido, asi que esta en el camino critico, no en un paso opcional.
 storyboards viven en disco como JSON. SQLite guarda en que etapa esta cada
 video y donde esta cada artefacto. Los artefactos se pueden leer, editar a mano
 y versionar; una columna BLOB no.
+
+## El sistema de movimiento
+
+Un video hecho de elementos que entran y se congelan se lee como una
+presentacion de diapositivas, por muy cuidada que sea la entrada. Lo que lo
+convierte en motion graphics es que **nada se queda completamente quieto**.
+
+`video/src/theme/motion.ts` divide las animaciones en dos familias, y toda
+escena usa al menos una de cada:
+
+- **Entrada**, ocurre una vez: `enterUp` (sube, aparece y se enfoca desde un
+  desenfoque), `popIn` (rebote corto para numeros y badges), `staggerWords`
+  (titulos palabra a palabra, para que se lean mientras aparecen).
+- **Continua**, no para nunca: `breathe` (escala oscilante del 0.6%), `drift`
+  (deriva en dos ejes con periodos primos entre si, para que la trayectoria no
+  se sienta ciclica), `oscillate`, `pulse`.
+
+Encima van tres capas mas:
+
+**Ambiente** (`Ambience.tsx`): tres manchas de aurora en deriva lenta, dos
+rejillas a distinta escala moviendose en direcciones opuestas para dar
+parallax, grano que rompe el banding de los degradados, y vineteado. Las
+manchas son degradados radiales, no divs con `filter: blur()`: un blur de
+200px sobre 900 frames multiplica el tiempo de render, un degradado radial ya
+es suave por definicion.
+
+**Camara** (`Frame.tsx`): cada escena recibe un push-in del 3-5% y una deriva
+propia. Escenas vecinas usan `phase` distinta para que sus derivas no
+coincidan. El ambiente queda fuera de la transformacion a proposito: si el
+fondo hiciera zoom con el contenido, se perderia la profundidad.
+
+**Transiciones** (`@remotion/transitions`): ninguna escena entra con corte
+seco. Cada transicion empuja en la direccion del contenido que llega.
+
+## Musica
+
+`tools/make-ambient-bed.mjs` sintetiza la cama sonora y la escribe como WAV.
+
+```powershell
+node tools/make-ambient-bed.mjs 60 video/public/ambient-bed.wav
+```
+
+Se genera en vez de descargarse porque la musica con licencia es la via mas
+rapida a un reclamo de Content ID, y un reclamo en un canal nuevo cuesta
+tiempo deshacerlo. Esto es audio original producido por un algoritmo que esta
+en el repositorio: su procedencia es auditable.
+
+La pieza es deliberadamente aburrida. La menor, tonica y quinta como drone,
+triada abierta encima, osciladores destemplados unos pocos cents entre si
+(dos osciladores exactamente afinados suenan a sintetizador barato), ruido
+rosa filtrado como aire, y periodos de LFO primos entre si para que no se
+perciba el bucle. Sin percusion y sin melodia identificable: una cama para
+contenido tecnico tiene que sostener la narracion sin pedir atencion.
+
+Normalizada a -14 dBFS de pico, y en la composicion suena al 32%. Cuando
+entre la narracion en la Fase 3, esta pista baja otros 6 dB.

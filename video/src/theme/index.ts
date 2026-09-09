@@ -12,6 +12,9 @@ export const theme = {
     bg: '#0B0E14',
     bgElevated: '#141922',
     grid: '#1C2430',
+    /** Enlaces y bordes de tarjeta. Mas claro que la rejilla: la rejilla es
+     *  fondo y debe hundirse, un enlace es contenido y debe leerse. */
+    line: '#33415A',
 
     text: '#E6EDF3',
     textMuted: '#8B98A9',

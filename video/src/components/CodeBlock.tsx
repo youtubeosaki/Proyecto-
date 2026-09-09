@@ -1,22 +1,29 @@
 import type React from 'react';
-import { useCurrentFrame } from 'remotion';
+import { useCurrentFrame, useVideoConfig } from 'remotion';
 import { z } from 'zod';
-import { theme } from '../theme/index';
-import { progressBetween } from '../theme/animation';
+import { theme } from '../theme';
+import {
+  breathe,
+  entranceStyle,
+  enterUp,
+  oscillate,
+  progressBetween,
+  pulse,
+} from '../theme/motion';
 import { Frame } from './Frame';
 
 /**
  * Bloque de codigo con resaltado progresivo de lineas.
  *
  * No hay resaltado de sintaxis por lenguaje a proposito: en video, resaltar
- * QUE linea importa ahora comunica mucho mas que colorear cada keyword.
- * El foco se mueve con la narracion.
+ * QUE linea importa ahora comunica mucho mas que colorear cada keyword. El
+ * foco se mueve con la narracion.
  */
 
 export const codeBlockSchema = z.object({
   title: z.string().optional(),
   language: z.string().default('text'),
-  /** Una entrada por linea. Sin tabs: se expanden distinto en cada navegador. */
+  /** Una entrada por linea. Sin tabs: se expanden distinto en cada motor. */
   lines: z.array(z.string()),
   /**
    * Que lineas resaltar y desde que frame. Indices basados en 0.
@@ -35,8 +42,11 @@ export const codeBlockSchema = z.object({
 
 export type CodeBlockProps = z.infer<typeof codeBlockSchema>;
 
+const LINE_HEIGHT = 40;
+
 export const CodeBlock: React.FC<CodeBlockProps> = ({ title, language, lines, highlights }) => {
   const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
 
   // El ultimo resaltado cuyo startFrame ya paso es el que manda.
   const active = highlights
@@ -45,15 +55,21 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({ title, language, lines, hi
 
   const activeLines = new Set(active?.lines ?? []);
   const hasFocus = activeLines.size > 0;
+  const focusFlash = active ? pulse(frame, active.startFrame, 20) : 0;
+
+  const panel = enterUp(frame, 0, fps);
 
   return (
-    <Frame>
+    <Frame phase={4.4} zoom={0.038}>
       <div
         style={{
           backgroundColor: theme.color.bgElevated,
           border: `2px solid ${theme.color.grid}`,
           borderRadius: theme.radius.lg,
           overflow: 'hidden',
+          position: 'relative',
+          boxShadow: '0 24px 80px rgba(0,0,0,0.55)',
+          ...entranceStyle(panel, `scale(${breathe(frame, 300, 0.004).toFixed(4)})`),
         }}
       >
         <div
@@ -81,32 +97,60 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({ title, language, lines, hi
           </span>
         </div>
 
-        <div style={{ padding: '24px 28px' }}>
+        <div style={{ padding: '24px 28px', position: 'relative' }}>
+          {/* Banda de foco que se DESLIZA entre bloques resaltados en vez de
+              saltar. Ese deslizamiento es lo que guia el ojo. */}
+          {hasFocus ? (
+            <div
+              style={{
+                position: 'absolute',
+                left: 11,
+                right: 28,
+                top: 24 + Math.min(...activeLines) * LINE_HEIGHT,
+                height: activeLines.size * LINE_HEIGHT,
+                background: `linear-gradient(90deg, ${theme.color.accent}22, ${theme.color.accent}08)`,
+                borderLeft: `3px solid ${theme.color.accent}`,
+                borderRadius: 4,
+                boxShadow: `0 0 ${(30 * focusFlash + 6).toFixed(1)}px ${theme.color.accent}${focusFlash > 0.05 ? '55' : '22'}`,
+              }}
+            />
+          ) : null}
+
           {lines.map((line, index) => {
             const focused = activeLines.has(index);
-            const reveal = progressBetween(frame, index * 2, index * 2 + theme.timing.quick);
+            const reveal = progressBetween(frame, index * 2, index * 2 + 12);
 
             return (
               <div
                 key={index}
                 style={{
+                  position: 'relative',
                   display: 'flex',
                   gap: 20,
+                  height: LINE_HEIGHT,
+                  alignItems: 'center',
                   fontFamily: theme.font.mono,
                   fontSize: theme.size.code,
-                  lineHeight: 1.65,
-                  opacity: reveal * (hasFocus && !focused ? 0.32 : 1),
-                  backgroundColor: focused ? 'rgba(77, 163, 255, 0.10)' : 'transparent',
-                  borderLeft: `3px solid ${focused ? theme.color.accent : 'transparent'}`,
-                  paddingLeft: 14,
-                  marginLeft: -17,
-                  transition: 'none',
+                  opacity: reveal * (hasFocus && !focused ? 0.3 : 1),
+                  transform: `translateX(${((1 - reveal) * 14).toFixed(2)}px)`,
                 }}
               >
-                <span style={{ color: theme.color.grid, width: 34, textAlign: 'right', flexShrink: 0 }}>
+                <span
+                  style={{
+                    color: focused ? theme.color.accent : theme.color.grid,
+                    width: 34,
+                    textAlign: 'right',
+                    flexShrink: 0,
+                  }}
+                >
                   {index + 1}
                 </span>
-                <span style={{ color: focused ? theme.color.text : theme.color.textMuted, whiteSpace: 'pre' }}>
+                <span
+                  style={{
+                    color: focused ? theme.color.text : theme.color.textMuted,
+                    whiteSpace: 'pre',
+                  }}
+                >
                   {line || ' '}
                 </span>
               </div>
@@ -121,7 +165,10 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({ title, language, lines, hi
             marginTop: 32,
             fontSize: theme.size.label,
             color: theme.color.accent,
-            opacity: progressBetween(frame, active.startFrame, active.startFrame + theme.timing.quick),
+            ...entranceStyle(
+              enterUp(frame, active.startFrame, fps),
+              `translateY(${(oscillate(frame, 210) * 2).toFixed(2)}px)`,
+            ),
           }}
         >
           {active.note}

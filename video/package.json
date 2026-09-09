@@ -9,7 +9,9 @@
   },
   "dependencies": {
     "@remotion/cli": "4.0.409",
+    "@remotion/media-utils": "4.0.409",
     "@remotion/shapes": "4.0.409",
+    "@remotion/transitions": "4.0.409",
     "@remotion/zod-types": "4.0.409",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

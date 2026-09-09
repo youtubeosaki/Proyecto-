@@ -69,7 +69,13 @@ importers:
       '@remotion/cli':
         specifier: 4.0.409
         version: 4.0.409(postcss@8.5.28)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      '@remotion/media-utils':
+        specifier: 4.0.409
+        version: 4.0.409(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       '@remotion/shapes':
+        specifier: 4.0.409
+        version: 4.0.409(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      '@remotion/transitions':
         specifier: 4.0.409
         version: 4.0.409(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       '@remotion/zod-types':
@@ -545,6 +551,12 @@ packages:
 
   '@remotion/studio@4.0.409':
     resolution: {integrity: sha512-3hbq2kNgjoorxbQKFX0mrsmIwAreQCv1WusaT8ZRwZwsGU1TIAf6Me88o4KTsSviDvhqyDBHHX2NuD8fdf9I2g==}
+    peerDependencies:
+      react: '>=16.8.0'
+      react-dom: '>=16.8.0'
+
+  '@remotion/transitions@4.0.409':
+    resolution: {integrity: sha512-b4TeoWOI1HAsovuYuSEZ/R3yG/QJ0mFWcZxh5BKCRZKfBVu06KmlTADUr1SmZwIaSafMw/eLvUbvFC734B7m7w==}
     peerDependencies:
       react: '>=16.8.0'
       react-dom: '>=16.8.0'
@@ -1769,6 +1781,14 @@ snapshots:
       - bufferutil
       - supports-color
       - utf-8-validate
+
+  '@remotion/transitions@4.0.409(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
+    dependencies:
+      '@remotion/paths': 4.0.409
+      '@remotion/shapes': 4.0.409(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      react: 19.2.8
+      react-dom: 19.2.8(react@19.2.8)
+      remotion: 4.0.409(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
 
   '@remotion/web-renderer@4.0.409(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
     dependencies:
