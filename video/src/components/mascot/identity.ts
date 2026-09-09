@@ -75,7 +75,7 @@ export const OKI_GEOMETRY = {
     radius: 9.5,
   },
   hand: {
-    radius: 17,
+    radius: 19,
     /** Posicion en reposo, a los lados del cuerpo. */
     restLeftX: 4,
     restRightX: 196,

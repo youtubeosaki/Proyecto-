@@ -164,23 +164,129 @@ export function pointingHandAt(angleDeg: number): Point {
   };
 }
 
-const Hand: React.FC<{ x: number; y: number; radius: number }> = ({ x, y, radius }) => (
-  <g>
-    <circle cx={x} cy={y} r={radius + 5} fill={OKI_COLORS.antenna} opacity={0.1} />
-    <circle
-      cx={x}
-      cy={y}
-      r={radius}
-      // Un punto mas claras que la carcasa: a la misma luminosidad se leen
-      // como agujeros en el fondo en vez de como manos.
-      fill="#37455C"
-      stroke={OKI_COLORS.outline}
-      strokeWidth={3}
-    />
-    {/* Reflejo: sin el, la mano se lee como un agujero en vez de como volumen. */}
-    <circle cx={x - radius * 0.28} cy={y - radius * 0.3} r={radius * 0.28} fill="#FFFFFF" opacity={0.2} />
-  </g>
-);
+/** Cuanto sobresale la punta del indice mas alla del centro de la palma. */
+const FINGERTIP_REACH = 2.5;
+
+/**
+ * Punta del dedo indice, en coordenadas del lienzo.
+ *
+ * El haz de señalado tiene que nacer AQUI y no en el centro de la palma: si
+ * sale de la palma, atraviesa el propio dedo y el gesto deja de leerse como
+ * señalar.
+ */
+export function pointingFingertipAt(angleDeg: number): Point {
+  const hand = pointingHandAt(angleDeg);
+  const radians = (angleDeg * Math.PI) / 180;
+  const reach = OKI_GEOMETRY.hand.radius * FINGERTIP_REACH;
+  return {
+    x: hand.x + Math.cos(radians) * reach,
+    y: hand.y + Math.sin(radians) * reach,
+  };
+}
+
+type HandPose = 'idle' | 'point' | 'wave' | 'present';
+
+/**
+ * Mano con dedos.
+ *
+ * Se dibuja en coordenadas locales con los dedos apuntando a +X, y luego se
+ * rota entera al angulo que toque. Asi el gesto se define una sola vez y
+ * sirve para cualquier direccion, en vez de tener una variante por lado.
+ *
+ * Los dedos son trazos con extremos redondeados, no siluetas rellenas. A la
+ * escala a la que se ve la mano en pantalla, una silueta con contorno se
+ * emborrona; un trazo grueso se lee limpio.
+ */
+const Hand: React.FC<{
+  x: number;
+  y: number;
+  radius: number;
+  pose: HandPose;
+  /** Grados. 0 = dedos hacia la derecha. */
+  angleDeg: number;
+}> = ({ x, y, radius: r, pose, angleDeg }) => {
+  const skin = '#37455C';
+  const edge = OKI_COLORS.outline;
+
+  /** Un dedo: trazo con capa de contorno debajo para que despegue del fondo. */
+  const finger = (
+    key: string,
+    x1: number,
+    y1: number,
+    x2: number,
+    y2: number,
+    width: number,
+  ) => (
+    <g key={key}>
+      <line
+        x1={x1}
+        y1={y1}
+        x2={x2}
+        y2={y2}
+        stroke={edge}
+        strokeWidth={width + 3}
+        strokeLinecap="round"
+      />
+      <line x1={x1} y1={y1} x2={x2} y2={y2} stroke={skin} strokeWidth={width} strokeLinecap="round" />
+    </g>
+  );
+
+  const fingers: React.ReactNode[] = [];
+
+  if (pose === 'point') {
+    // Indice extendido. Es el gesto que tiene que leerse a la primera, asi
+    // que es claramente mas largo que el resto de la mano.
+    fingers.push(finger('index', r * 0.2, -r * 0.12, r * 2.25, -r * 0.12, r * 0.62));
+    // Pulgar levantado, que es lo que hace que el resto se lea como puño.
+    fingers.push(finger('thumb', -r * 0.1, -r * 0.35, -r * 0.35, -r * 1.15, r * 0.5));
+  } else if (pose === 'present' || pose === 'wave') {
+    // Cuatro dedos abiertos en abanico.
+    [-38, -13, 13, 38].forEach((deg, index) => {
+      const radians = (deg * Math.PI) / 180;
+      fingers.push(
+        finger(
+          `open${index}`,
+          Math.cos(radians) * r * 0.45,
+          Math.sin(radians) * r * 0.45,
+          Math.cos(radians) * r * 1.95,
+          Math.sin(radians) * r * 1.95,
+          r * 0.5,
+        ),
+      );
+    });
+    fingers.push(finger('thumb', -r * 0.2, -r * 0.4, -r * 0.55, -r * 1.2, r * 0.48));
+  } else {
+    // Reposo: mano relajada, dedos cortos y juntos. No es un puño cerrado
+    // (leeria como enfado) ni una mano abierta (leeria como saludo).
+    [-0.5, 0, 0.5].forEach((offset, index) => {
+      fingers.push(
+        finger(
+          `rest${index}`,
+          r * 0.45,
+          offset * r * 0.62,
+          r * 1.25,
+          offset * r * 0.78,
+          r * 0.46,
+        ),
+      );
+    });
+    fingers.push(finger('thumb', -r * 0.15, -r * 0.35, -r * 0.45, -r * 0.95, r * 0.44));
+  }
+
+  return (
+    <g transform={`translate(${x} ${y}) rotate(${angleDeg})`}>
+      {/* Halo tenue: separa la mano del fondo cuando se aleja del cuerpo. */}
+      <circle cx={0} cy={0} r={r * 1.5} fill={OKI_COLORS.antenna} opacity={0.08} />
+
+      {/* Dedos debajo de la palma para que nazcan de ella. */}
+      {fingers}
+
+      <circle cx={0} cy={0} r={r * 0.92} fill={skin} stroke={edge} strokeWidth={3} />
+      {/* Reflejo: sin el, la palma se lee como un agujero en vez de volumen. */}
+      <circle cx={-r * 0.26} cy={-r * 0.28} r={r * 0.26} fill="#FFFFFF" opacity={0.2} />
+    </g>
+  );
+};
 
 /* --------------------------------------------------------------------------
  * Piezas
@@ -343,19 +449,47 @@ export const Oki: React.FC<OkiProps> = ({
   let leftHand: Point = restLeft;
   let rightHand: Point = restRight;
 
+  /**
+   * Pose y orientacion de cada mano por separado.
+   *
+   * Al señalar solo gesticula la mano del lado al que apunta; la otra se
+   * queda en reposo. Que las dos señalaran a la vez leeria como un robot
+   * haciendo una demostracion, no como alguien indicando algo.
+   */
+  let leftPose: HandPose = 'idle';
+  let rightPose: HandPose = 'idle';
+  // En reposo los dedos apuntan hacia fuera y algo hacia abajo.
+  let leftAngle = 160;
+  let rightAngle = 20;
+
   if (handPose === 'point') {
     const target = pointingHandAt(pointAngle);
-    // Señala con la mano del lado al que apunta; la otra se queda en reposo.
-    if (target.x >= hand.pivotX) rightHand = target;
-    else leftHand = target;
+    if (target.x >= hand.pivotX) {
+      rightHand = target;
+      rightPose = 'point';
+      rightAngle = pointAngle;
+    } else {
+      leftHand = target;
+      leftPose = 'point';
+      leftAngle = pointAngle;
+    }
   } else if (handPose === 'wave') {
     // Saludo: la mano derecha sube y oscila.
     const swing = oscillate(frame, 26, phase) * 26;
     rightHand = { x: hand.restRightX + 6 + swing * 0.5, y: hand.restY - 62 + Math.abs(swing) * 0.2 };
+    rightPose = 'wave';
+    // La mano bascula con el saludo: sin eso solo se traslada, y se lee como
+    // una mano que flota, no como alguien saludando.
+    rightAngle = -70 + swing * 0.9;
   } else if (handPose === 'present') {
     // Presentar: ambas manos abiertas hacia delante, como sosteniendo algo.
     leftHand = { x: hand.restLeftX + 22, y: hand.restY + 14 + handBobLeft };
     rightHand = { x: hand.restRightX - 22, y: hand.restY + 14 + handBobRight };
+    leftPose = 'present';
+    rightPose = 'present';
+    // Palmas hacia arriba, como sosteniendo lo que se presenta.
+    leftAngle = -125;
+    rightAngle = -55;
   }
 
   const { head, eye, antenna } = OKI_GEOMETRY;
@@ -474,8 +608,20 @@ export const Oki: React.FC<OkiProps> = ({
 
         {/* Manos al final: al señalar la mano sale del cuerpo y tiene que
             quedar por delante de la carcasa. */}
-        <Hand x={leftHand.x} y={leftHand.y} radius={hand.radius} />
-        <Hand x={rightHand.x} y={rightHand.y} radius={hand.radius} />
+        <Hand
+          x={leftHand.x}
+          y={leftHand.y}
+          radius={hand.radius}
+          pose={leftPose}
+          angleDeg={leftAngle}
+        />
+        <Hand
+          x={rightHand.x}
+          y={rightHand.y}
+          radius={hand.radius}
+          pose={rightPose}
+          angleDeg={rightAngle}
+        />
       </g>
     </svg>
   );

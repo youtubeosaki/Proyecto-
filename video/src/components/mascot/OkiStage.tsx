@@ -4,7 +4,7 @@ import { theme } from '../../theme';
 import { easeInOutSine, oscillate, progressBetween } from '../../theme/motion';
 import type { OkiExpression } from './identity';
 import { OKI_VIEWBOX } from './identity';
-import { Oki, pointingHandAt } from './Oki';
+import { Oki, pointingFingertipAt } from './Oki';
 
 /**
  * ESCENARIO DE OKI
@@ -155,10 +155,10 @@ export const OkiStage: React.FC<OkiStageProps> = ({
   /**
    * Angulo hacia el objetivo, y de ahi la posicion de la mano que señala.
    *
-   * El haz nace en la MANO, no en el costado del cuerpo. Se calcula con el
-   * mismo helper que usa el personaje para colocarla, porque si cada lado
-   * hiciera su propia cuenta el haz acabaria naciendo a unos pixeles de la
-   * mano y eso se ve.
+   * El haz nace en la PUNTA DEL INDICE, no en el costado del cuerpo ni en el
+   * centro de la palma. Se calcula con el mismo helper que coloca la mano,
+   * porque si cada lado hiciera su cuenta el haz naceria desplazado y el
+   * gesto dejaria de leerse como señalar.
    */
   const pointAngle = state.lookAt
     ? (Math.atan2(state.lookAt.y - state.y, state.lookAt.x - state.x) * 180) / Math.PI
@@ -167,11 +167,11 @@ export const OkiStage: React.FC<OkiStageProps> = ({
   // El lienzo del personaje se escala a `size`; hay que llevar las
   // coordenadas del lienzo a pixeles de la escena.
   const scale = size / OKI_VIEWBOX.height;
-  const hand = pointingHandAt(pointAngle);
+  const fingertip = pointingFingertipAt(pointAngle);
   const pointerOrigin = state.lookAt
     ? {
-        x: state.x + (hand.x - OKI_VIEWBOX.width / 2) * scale,
-        y: state.y + (hand.y - OKI_VIEWBOX.height / 2) * scale,
+        x: state.x + (fingertip.x - OKI_VIEWBOX.width / 2) * scale,
+        y: state.y + (fingertip.y - OKI_VIEWBOX.height / 2) * scale,
       }
     : null;
 
