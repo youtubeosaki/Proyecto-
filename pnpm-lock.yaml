@@ -35,6 +35,9 @@ importers:
       '@osaki/llm':
         specifier: workspace:*
         version: link:../llm
+      '@osaki/publish':
+        specifier: workspace:*
+        version: link:../publish
       '@osaki/research':
         specifier: workspace:*
         version: link:../research
@@ -44,6 +47,9 @@ importers:
       '@osaki/server':
         specifier: workspace:*
         version: link:../server
+      '@osaki/shorts':
+        specifier: workspace:*
+        version: link:../shorts
       '@osaki/voice':
         specifier: workspace:*
         version: link:../voice
@@ -118,6 +124,18 @@ importers:
         specifier: ^3.24.1
         version: 3.25.76
 
+  packages/publish:
+    dependencies:
+      '@osaki/core':
+        specifier: workspace:*
+        version: link:../core
+      '@osaki/db':
+        specifier: workspace:*
+        version: link:../db
+      zod:
+        specifier: ^3.24.1
+        version: 3.25.76
+
   packages/research:
     dependencies:
       '@osaki/core':
@@ -162,6 +180,21 @@ importers:
       '@osaki/script':
         specifier: workspace:*
         version: link:../script
+
+  packages/shorts:
+    dependencies:
+      '@osaki/core':
+        specifier: workspace:*
+        version: link:../core
+      '@osaki/db':
+        specifier: workspace:*
+        version: link:../db
+      '@osaki/llm':
+        specifier: workspace:*
+        version: link:../llm
+      zod:
+        specifier: ^3.24.1
+        version: 3.25.76
 
   packages/voice:
     dependencies:

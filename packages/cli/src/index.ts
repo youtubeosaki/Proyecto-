@@ -247,6 +247,15 @@ async function main(): Promise<void> {
         throw new OsakiError(`No existe el video ${videoId}.`);
       }
 
+      /**
+       * El gate humano se comprueba ANTES que las dependencias de etapa.
+       *
+       * Al reves, alguien sin aprobacion recibe "ejecuta packaging primero",
+       * arregla eso, y solo entonces descubre el bloqueo real. El mensaje
+       * tiene que nombrar el motivo de verdad a la primera.
+       */
+      if (stageName === 'publish' || stageName === 'shorts') assertRenderApproved(videoId);
+
       // Una etapa no arranca si la anterior no dejo su artefacto. Es lo que
       // hace que reejecutar la 6 sea seguro: comprueba la 5 y sigue.
       if (definition.requires) {
@@ -258,9 +267,6 @@ async function main(): Promise<void> {
           );
         }
       }
-
-      // Los gates humanos no se saltan por diseno: publish comprueba esto.
-      if (stageName === 'publish') assertRenderApproved(videoId);
 
       if (!definition.implemented) {
         throw new OsakiError(

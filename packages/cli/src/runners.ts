@@ -8,6 +8,9 @@ import { ApprovalRepository, StageRunRepository, VideoRepository, openDatabase }
 import { listTopIdeas, runIdeasStage } from '@osaki/ingest';
 import { readFactSheet, runResearchStage } from '@osaki/research';
 import { chosenAngle, readAngles, readScript, runAnglesStage, runScriptStage } from '@osaki/script';
+import { runAnalyticsStage, runPublishStage } from '@osaki/publish';
+import { runShortsStage } from '@osaki/shorts';
+import { readPackaging } from '@osaki/compose';
 import {
   readAudio,
   readStoryboard,
@@ -248,6 +251,70 @@ async function execute(stage: Stage, videoId: string, title: string): Promise<Ru
               `  pnpm --filter @osaki/video exec remotion still src/index.ts Thumbnail ` +
               `../data/renders/${videoId}/thumb-${index + 1}.png --props='${JSON.stringify(thumb)}'`,
           ),
+        ],
+      };
+    }
+
+    case 'shorts': {
+      const script = readScript(videoId);
+      const storyboard = readStoryboard(videoId);
+      const audio = readAudio(videoId);
+      const result = await runShortsStage(videoId, script, storyboard, audio);
+
+      return {
+        summary: [
+          `${result.shorts.length} Shorts seleccionados.`,
+          '',
+          ...result.shorts.flatMap((short) => [
+            `  [${short.confidence.toFixed(2)}] ${short.title}`,
+            `        segmento ${short.segmentIndex}, ${short.captions.length} subtitulos`,
+            `        ${short.hookReason}`,
+          ]),
+          '',
+          'Renderizalos con:',
+          ...result.shorts.map(
+            (short, index) =>
+              `  pnpm --filter @osaki/video exec remotion render src/index.ts Short ` +
+              `../data/renders/${videoId}/short-${index + 1}.mp4 ` +
+              `--props='<el objeto del artefacto shorts.json>'`,
+          ),
+        ],
+      };
+    }
+
+    case 'publish': {
+      // El gate se comprueba tambien dentro de runPublishStage: aqui para
+      // fallar pronto, y alli porque es la garantia que no puede depender de
+      // que la CLI sea el unico camino de entrada.
+      assertRenderApproved(videoId);
+
+      const packaging = readPackaging(videoId);
+      const result = await runPublishStage(videoId, packaging);
+
+      return {
+        summary: [
+          `Subido como ${result.privacy.toUpperCase()}, nunca publico.`,
+          `  ${result.url}`,
+          result.thumbnailUploaded
+            ? '  Miniatura puesta.'
+            : '  Sin miniatura: ponla a mano en YouTube Studio.',
+          '',
+          'Cuando quieras hacerlo publico, hazlo desde Studio mirando el video.',
+        ],
+      };
+    }
+
+    case 'analytics': {
+      const performance = await runAnalyticsStage(videoId);
+
+      return {
+        summary: [
+          `Visualizaciones: ${performance.views}`,
+          `CTR: ${performance.ctr !== null ? (performance.ctr * 100).toFixed(1) + '%' : 'sin datos'}`,
+          `Duracion media: ${performance.averageViewDuration ?? 'sin datos'} s`,
+          `Retencion a 30s: ${performance.retention30s !== null ? (performance.retention30s * 100).toFixed(0) + '%' : 'sin datos'}`,
+          '',
+          'Guardado. Alimentara el scoring del banco de ideas.',
         ],
       };
     }

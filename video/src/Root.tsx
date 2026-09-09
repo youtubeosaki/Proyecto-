@@ -4,6 +4,7 @@ import { Demo, DEMO_DURATION_IN_FRAMES } from './compositions/Demo';
 import { MascotSheet, MASCOT_SHEET_DURATION } from './compositions/MascotSheet';
 import { Generated, generatedSchema, totalFrames, type GeneratedProps } from './compositions/Generated';
 import { Thumbnail, thumbnailSchema } from './compositions/Thumbnail';
+import { Short, shortSchema, type ShortProps } from './compositions/Short';
 import { theme } from './theme/index';
 
 /**
@@ -49,6 +50,29 @@ export const RemotionRoot: React.FC = () => (
       fps={theme.timing.fps}
       width={1920}
       height={1080}
+    />
+
+    {/*
+      Short vertical. Reutiliza la misma escena del video largo escalada a
+      9:16, con subtitulos quemados porque los Shorts se ven sin sonido.
+    */}
+    <Composition
+      id="Short"
+      component={Short}
+      schema={shortSchema}
+      defaultProps={{
+        title: 'Titular del Short',
+        scene: { kind: 'titleCard', props: { title: 'Escena' } },
+        durationInFrames: 600,
+        captions: [],
+      }}
+      calculateMetadata={({ props }: { props: ShortProps }) => ({
+        durationInFrames: props.durationInFrames ?? 600,
+      })}
+      durationInFrames={600}
+      fps={theme.timing.fps}
+      width={1080}
+      height={1920}
     />
 
     {/*

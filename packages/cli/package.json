@@ -19,6 +19,8 @@
     "@osaki/script": "workspace:*",
     "@osaki/compose": "workspace:*",
     "@osaki/voice": "workspace:*",
-    "@osaki/server": "workspace:*"
+    "@osaki/server": "workspace:*",
+    "@osaki/publish": "workspace:*",
+    "@osaki/shorts": "workspace:*"
   }
 }

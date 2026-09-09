@@ -1,0 +1,22 @@
+{
+  "shorts": [
+    {
+      "segmentIndex": 5,
+      "title": "El reintento crea un duplicado",
+      "hookReason": "Muestra el momento exacto en que el sistema se equivoca a proposito. Se entiende sin nada de contexto previo.",
+      "confidence": 0.88
+    },
+    {
+      "segmentIndex": 7,
+      "title": "El ACK de TCP no dice lo que crees",
+      "hookReason": "Contradice directamente lo que asume cualquiera que haya leido sobre TCP, y la comparativa se lee entera de un vistazo.",
+      "confidence": 0.81
+    },
+    {
+      "segmentIndex": 3,
+      "title": "Como se calcula el plazo",
+      "hookReason": "La formula es concreta pero necesita saber que se estaba esperando algo, asi que suelto pierde fuerza.",
+      "confidence": 0.42
+    }
+  ]
+}

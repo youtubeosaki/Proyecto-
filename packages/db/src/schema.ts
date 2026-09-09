@@ -109,4 +109,36 @@ export const MIGRATIONS: readonly Migration[] = [
       CREATE INDEX idx_analytics_video ON analytics_snapshots(video_id, days_since_publish);
     `,
   },
+  {
+    id: 2,
+    name: 'youtube_quota',
+    sql: `
+      -- Contabilidad de la cuota diaria de la YouTube Data API.
+      -- En la base y no en memoria porque el proceso se reinicia y la cuota no.
+      CREATE TABLE youtube_quota (
+        id        INTEGER PRIMARY KEY AUTOINCREMENT,
+        -- Dia en hora del Pacifico, que es cuando Google reinicia el contador.
+        day       TEXT NOT NULL,
+        operation TEXT NOT NULL,
+        units     INTEGER NOT NULL,
+        spent_at  TEXT NOT NULL
+      );
+
+      CREATE INDEX idx_quota_day ON youtube_quota(day);
+
+      -- Shorts derivados de un video largo.
+      CREATE TABLE shorts (
+        id               TEXT PRIMARY KEY,
+        video_id         TEXT NOT NULL REFERENCES videos(id) ON DELETE CASCADE,
+        segment_index    INTEGER NOT NULL,
+        title            TEXT NOT NULL,
+        render_path      TEXT,
+        youtube_video_id TEXT,
+        published_at     TEXT,
+        created_at       TEXT NOT NULL
+      );
+
+      CREATE INDEX idx_shorts_video ON shorts(video_id);
+    `,
+  },
 ];

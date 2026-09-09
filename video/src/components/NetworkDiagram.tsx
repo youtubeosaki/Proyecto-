@@ -12,6 +12,7 @@ import {
   pulse,
 } from '../theme/motion';
 import { Frame } from './Frame';
+import { useSceneSize } from './SceneSize';
 import { OkiStage, type OkiBeat } from './mascot/OkiStage';
 import type { OkiExpression } from './mascot/identity';
 
@@ -104,7 +105,9 @@ export const NetworkDiagram: React.FC<NetworkDiagramProps> = ({
   guide,
 }) => {
   const frame = useCurrentFrame();
-  const { fps, width, height } = useVideoConfig();
+  const { fps } = useVideoConfig();
+  // El lienzo LOGICO, no el de la composicion: en un Short no coinciden.
+  const { width, height } = useSceneSize();
 
   const padding = 96;
   const areaWidth = width - padding * 2;
