@@ -1,0 +1,25 @@
+# n8n self-hosted para Docker Desktop en Windows.
+#   PowerShell:  docker compose -f docker/docker-compose.yml up -d
+#   Panel:       http://localhost:5678
+#
+# El volumen `n8n-data` guarda los workflows y el estado de los nodos Wait,
+# que es lo que permite que una aprobacion humana sobreviva a un reinicio.
+services:
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:latest
+    container_name: osaki-n8n
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - WEBHOOK_URL=http://localhost:5678/
+      - GENERIC_TIMEZONE=Europe/Madrid
+      # Los formularios de aprobacion sirven el MP4 desde este directorio.
+      - N8N_DEFAULT_BINARY_DATA_MODE=filesystem
+    volumes:
+      - ./n8n-data:/home/node/.n8n
+      # El pipeline escribe renders aqui; n8n los lee para mostrartelos.
+      - ../data:/data:ro

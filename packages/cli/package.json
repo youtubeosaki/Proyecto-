@@ -1,0 +1,14 @@
+{
+  "name": "@osaki/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": { "osaki": "./dist/index.js" },
+  "main": "./dist/index.js",
+  "scripts": { "build": "tsc -p tsconfig.json" },
+  "dependencies": {
+    "@osaki/core": "workspace:*",
+    "@osaki/db": "workspace:*",
+    "@osaki/llm": "workspace:*"
+  }
+}

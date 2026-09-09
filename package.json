@@ -1,0 +1,28 @@
+{
+  "name": "osaki",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Pipeline semi-automatizado de produccion de video para YouTube. Ingenieria explicada.",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "pnpm -r --filter=./packages/* build",
+    "typecheck": "pnpm -r exec tsc --noEmit",
+    "osaki": "pnpm --filter @osaki/cli exec tsx src/index.ts",
+    "studio": "pnpm --filter @osaki/video exec remotion studio src/index.ts",
+    "render:demo": "pnpm --filter @osaki/video exec remotion render src/index.ts Demo out/demo.mp4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  },
+  "packageManager": "pnpm@10.33.0",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "better-sqlite3",
+      "esbuild"
+    ]
+  }
+}

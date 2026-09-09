@@ -1,0 +1,22 @@
+node_modules/
+dist/
+out/
+.env
+.env.local
+*.tsbuildinfo
+
+# Estado y artefactos locales del pipeline
+data/*.db
+data/*.db-journal
+data/*.db-wal
+data/*.db-shm
+data/videos/
+data/audio/
+data/renders/
+data/exchange/
+
+# n8n
+docker/n8n-data/
+
+# Remotion
+video/out/
