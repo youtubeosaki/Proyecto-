@@ -1,0 +1,65 @@
+{
+  "title": "Por que tu telefono manda el mismo mensaje varias veces",
+  "segments": [
+    {
+      "narration": "Para que un mensaje no se pierda, alguien tiene que estar dispuesto a mandarlo dos veces. Y otro alguien, a tirar el duplicado sin decir nada. Eso es, basicamente, todo el truco.",
+      "scene": "[ESCENA: titleCard | titulo del video sobre fondo del canal]",
+      "claimIds": []
+    },
+    {
+      "narration": "Escribes un mensaje y pulsas enviar. Tu telefono abre una conexion, manda los bytes y espera. Hasta aqui, nada raro. Lo raro empieza cuando la respuesta no llega.",
+      "scene": "[ESCENA: networkDiagram | el telefono manda un mensaje al servidor y espera respuesta]",
+      "claimIds": ["c3"]
+    },
+    {
+      "narration": "Porque tu telefono no sabe distinguir dos situaciones muy distintas. Una: el mensaje se perdio por el camino. Dos: el mensaje llego perfectamente y lo que se perdio fue la confirmacion de vuelta. Desde fuera, las dos se ven exactamente igual: silencio.",
+      "scene": "[ESCENA: sideBySide | mensaje perdido a la ida frente a confirmacion perdida a la vuelta]",
+      "claimIds": ["c3", "c6"]
+    },
+    {
+      "narration": "Asi que hay que decidir cuanto esperar antes de darlo por perdido. Y aqui es donde TCP hace algo mas listo de lo que parece: no usa un numero fijo. Mide cuanto tarda de media un viaje de ida y vuelta, mide cuanto varia ese tiempo, y calcula el plazo a partir de las dos cosas.",
+      "scene": "[ESCENA: counter | el temporizador de retransmision calculado a partir del RTT]",
+      "claimIds": ["c4"]
+    },
+    {
+      "narration": "Si la red va fina, el plazo se acorta. Si va inestable, se alarga. El sistema se adapta solo, porque un plazo fijo o reintenta demasiado pronto y satura, o demasiado tarde y el usuario ya cerro la app.",
+      "scene": "[ESCENA: timeline | el temporizador se ajusta segun la variacion del RTT]",
+      "claimIds": ["c4"]
+    },
+    {
+      "narration": "Cuando el plazo expira, el mensaje se manda otra vez. Y aqui llega el problema interesante: si el original si habia llegado, el destinatario acaba de recibir el mismo mensaje dos veces.",
+      "scene": "[ESCENA: networkDiagram | el primer mensaje llega pero se pierde la confirmacion, y el reintento crea un duplicado]",
+      "claimIds": ["c3"]
+    },
+    {
+      "narration": "La solucion no es evitar el duplicado. Es hacer que no importe. Cada mensaje lleva un identificador unico, y el receptor lleva la cuenta de cuales ya proceso. Si llega uno repetido, lo tira sin decir nada.",
+      "scene": "[ESCENA: codeBlock | identificador de mensaje y comprobacion de duplicado]",
+      "claimIds": []
+    },
+    {
+      "narration": "Ahora bien, hay una capa mas que casi nadie tiene en cuenta. TCP te confirma que los bytes llegaron. Pero la especificacion es explicita en esto: esa confirmacion solo dice que el TCP del receptor asumio la responsabilidad de entregarlos. No dice que la aplicacion los haya leido.",
+      "scene": "[ESCENA: sideBySide | confirmacion de TCP frente a confirmacion de la aplicacion]",
+      "claimIds": ["c6"]
+    },
+    {
+      "narration": "Si la app se cierra justo entre las dos cosas, el mensaje esta confirmado a nivel de red y perdido a nivel de usuario. Por eso hace falta un segundo acuse, este ya de aplicacion: el receptor confirma cuando de verdad lo tiene guardado.",
+      "scene": "[ESCENA: timeline | los dos niveles de acuse y el hueco entre ambos]",
+      "claimIds": ["c5", "c6"]
+    },
+    {
+      "narration": "Y mientras tanto, el servidor no suelta el mensaje. Lo guarda y lo mantiene hasta que el destinatario aparece y confirma. Si tu movil esta apagado tres dias, el mensaje sigue ahi esperando.",
+      "scene": "[ESCENA: networkDiagram | el servidor guarda el mensaje hasta que el destinatario vuelve]",
+      "claimIds": ["c8"]
+    },
+    {
+      "narration": "Junta las piezas y el resultado es que ninguna capa se fia de la de abajo. Cada una confirma por su cuenta. Es redundante a proposito, porque cada capa solo puede garantizar lo suyo.",
+      "scene": "[ESCENA: timeline | las tres confirmaciones encadenadas]",
+      "claimIds": ["c5", "c6", "c8"]
+    },
+    {
+      "narration": "Lo que no vas a encontrar en ninguna parte es una garantia de entrega exactamente una vez. Esa garantia no existe en un sistema distribuido con fallos de red. Lo que existe es mandar hasta que alguien confirme, y tirar lo que llegue repetido. Los dos checks que ves en la pantalla son la punta visible de eso.",
+      "scene": "[ESCENA: counter | numero de confirmaciones necesarias para dar un mensaje por entregado]",
+      "claimIds": ["c6"]
+    }
+  ]
+}

@@ -13,6 +13,8 @@ import { STAGE_ORDER, type Stage } from '@osaki/core';
 
 export interface StageDefinition {
   stage: Stage;
+  /** No pertenece a la cadena de un video: alimenta el banco de ideas. */
+  global?: boolean;
   summary: string;
   /** Etapa cuyo artefacto necesita para arrancar. */
   requires?: Stage;
@@ -26,22 +28,25 @@ export interface StageDefinition {
 export const STAGES: Record<Stage, StageDefinition> = {
   ideas: {
     stage: 'ideas',
+    global: true,
     summary: 'Ingesta RSS + Hacker News, deduplica y puntua ideas.',
-    implemented: false,
+    implemented: true,
     phase: 2,
   },
   research: {
     stage: 'research',
     summary: 'Investiga el tema y produce un documento de hechos con fuentes primarias.',
-    requires: 'ideas',
-    implemented: false,
+    // Sin `requires`: el banco de ideas alimenta la CREACION del video, no
+    // esta etapa. Un tema puede entrar por el banco o escribirse a mano con
+    // `osaki new`, y exigir aqui una ingesta previa bloqueaba el segundo caso.
+    implemented: true,
     phase: 2,
   },
   angles: {
     stage: 'angles',
     summary: 'Propone 3 angulos y estructuras. APROBACION HUMANA #1.',
     requires: 'research',
-    implemented: false,
+    implemented: true,
     phase: 2,
     humanGate: true,
   },
@@ -49,7 +54,7 @@ export const STAGES: Record<Stage, StageDefinition> = {
     stage: 'script',
     summary: 'Escribe el guion con marcas [ESCENA: ...] a partir del angulo elegido.',
     requires: 'angles',
-    implemented: false,
+    implemented: true,
     phase: 2,
   },
   storyboard: {

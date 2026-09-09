@@ -1,0 +1,14 @@
+{
+  "claims": [
+    { "id": "c1", "verified": true, "verificationNote": null },
+    { "id": "c2", "verified": true, "verificationNote": null },
+    { "id": "c3", "verified": true, "verificationNote": null },
+    { "id": "c4", "verified": true, "verificationNote": null },
+    { "id": "c5", "verified": true, "verificationNote": null },
+    { "id": "c6", "verified": true, "verificationNote": null },
+    { "id": "c7", "verified": true, "verificationNote": null },
+    { "id": "c8", "verified": true, "verificationNote": null },
+    { "id": "c9", "verified": false, "verificationNote": "La cita sostiene que la entrega exactamente una vez es inalcanzable, pero no respalda la parte de la afirmacion sobre deduplicacion por identificador." },
+    { "id": "c12", "verified": true, "verificationNote": null }
+  ]
+}

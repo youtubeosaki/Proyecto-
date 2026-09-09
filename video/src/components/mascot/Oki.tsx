@@ -36,6 +36,14 @@ export const okiSchema = z.object({
   seed: z.number().int().nonnegative().default(1),
   /** Alto en pixeles. El ancho sale de la relacion del lienzo. */
   size: z.number().positive().default(220),
+  /** Que hacen las manos. */
+  handPose: z.enum(['idle', 'point', 'wave', 'present']).default('idle'),
+  /**
+   * Hacia donde señala, en grados. 0 es a la derecha y crece en el sentido
+   * de las agujas del reloj, como el eje Y de SVG. Solo se usa con
+   * handPose = 'point'.
+   */
+  pointAngle: z.number().default(0),
 });
 
 /**
@@ -129,6 +137,50 @@ function eyeShapeFor(expression: OkiExpression): EyeShape {
       return { scaleX: 1, scaleY: 1, offsetY: 0, arc: 0, headTilt: 0 };
   }
 }
+
+/* --------------------------------------------------------------------------
+ * Manos
+ * ----------------------------------------------------------------------- */
+
+export interface Point {
+  x: number;
+  y: number;
+}
+
+/**
+ * Posicion de la mano que señala, en coordenadas del lienzo.
+ *
+ * Se exporta porque el escenario la necesita para que el haz de señalado
+ * salga de la mano y no del costado del cuerpo. Si cada uno calculase la
+ * posicion por su cuenta, el haz acabaria naciendo a unos pixeles de la mano
+ * y se notaria.
+ */
+export function pointingHandAt(angleDeg: number): Point {
+  const { pivotX, pivotY, pointRadius } = OKI_GEOMETRY.hand;
+  const radians = (angleDeg * Math.PI) / 180;
+  return {
+    x: pivotX + Math.cos(radians) * pointRadius,
+    y: pivotY + Math.sin(radians) * pointRadius,
+  };
+}
+
+const Hand: React.FC<{ x: number; y: number; radius: number }> = ({ x, y, radius }) => (
+  <g>
+    <circle cx={x} cy={y} r={radius + 5} fill={OKI_COLORS.antenna} opacity={0.1} />
+    <circle
+      cx={x}
+      cy={y}
+      r={radius}
+      // Un punto mas claras que la carcasa: a la misma luminosidad se leen
+      // como agujeros en el fondo en vez de como manos.
+      fill="#37455C"
+      stroke={OKI_COLORS.outline}
+      strokeWidth={3}
+    />
+    {/* Reflejo: sin el, la mano se lee como un agujero en vez de como volumen. */}
+    <circle cx={x - radius * 0.28} cy={y - radius * 0.3} r={radius * 0.28} fill="#FFFFFF" opacity={0.2} />
+  </g>
+);
 
 /* --------------------------------------------------------------------------
  * Piezas
@@ -241,6 +293,8 @@ export const Oki: React.FC<OkiProps> = ({
   startFrame = 0,
   seed = 1,
   size = 220,
+  handPose = 'idle',
+  pointAngle = 0,
 }) => {
   const frame = useCurrentFrame();
   const { fps, durationInFrames } = useVideoConfig();
@@ -272,6 +326,37 @@ export const Oki: React.FC<OkiProps> = ({
   const antennaBeat = expression === 'thinking' ? 74 : 150;
   const antennaGlow = 0.55 + (oscillate(frame, antennaBeat, phase) * 0.5 + 0.5) * 0.45;
   const antennaSway = oscillate(frame, 190, phase * 1.5) * 3;
+
+  /**
+   * Manos. En reposo flotan a los lados y suben y bajan con desfase entre
+   * ellas; si respiraran a la vez pareceria un solo objeto partido en dos.
+   */
+  const { hand } = OKI_GEOMETRY;
+  const handBobLeft = oscillate(frame, 176, phase) * 5;
+  const handBobRight = oscillate(frame, 176, phase + Math.PI * 0.7) * 5;
+
+  // Anotado: la geometria es `as const`, asi que sin esto las coordenadas
+  // quedarian como tipos literales y no admitirian el gesto.
+  const restLeft: Point = { x: hand.restLeftX, y: hand.restY + handBobLeft };
+  const restRight: Point = { x: hand.restRightX, y: hand.restY + handBobRight };
+
+  let leftHand: Point = restLeft;
+  let rightHand: Point = restRight;
+
+  if (handPose === 'point') {
+    const target = pointingHandAt(pointAngle);
+    // Señala con la mano del lado al que apunta; la otra se queda en reposo.
+    if (target.x >= hand.pivotX) rightHand = target;
+    else leftHand = target;
+  } else if (handPose === 'wave') {
+    // Saludo: la mano derecha sube y oscila.
+    const swing = oscillate(frame, 26, phase) * 26;
+    rightHand = { x: hand.restRightX + 6 + swing * 0.5, y: hand.restY - 62 + Math.abs(swing) * 0.2 };
+  } else if (handPose === 'present') {
+    // Presentar: ambas manos abiertas hacia delante, como sosteniendo algo.
+    leftHand = { x: hand.restLeftX + 22, y: hand.restY + 14 + handBobLeft };
+    rightHand = { x: hand.restRightX - 22, y: hand.restY + 14 + handBobRight };
+  }
 
   const { head, eye, antenna } = OKI_GEOMETRY;
   const pivotX = OKI_VIEWBOX.width / 2;
@@ -386,6 +471,11 @@ export const Oki: React.FC<OkiProps> = ({
           gazeX={gazeX + wanderX}
           gazeY={gazeY + wanderY}
         />
+
+        {/* Manos al final: al señalar la mano sale del cuerpo y tiene que
+            quedar por delante de la carcasa. */}
+        <Hand x={leftHand.x} y={leftHand.y} radius={hand.radius} />
+        <Hand x={rightHand.x} y={rightHand.y} radius={hand.radius} />
       </g>
     </svg>
   );

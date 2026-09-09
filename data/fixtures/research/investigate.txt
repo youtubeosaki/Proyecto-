@@ -1,0 +1,81 @@
+{
+  "topic": "Como WhatsApp garantiza que no se pierda un mensaje",
+  "claims": [
+    {
+      "id": "c1",
+      "statement": "El protocolo Signal usa un intercambio de claves triple Diffie-Hellman extendido para establecer una clave compartida entre dos partes.",
+      "supportingQuote": "The X3DH protocol establishes a shared secret key between two parties who mutually authenticate each other based on public keys.",
+      "source": { "url": "https://signal.org/docs/specifications/x3dh/", "title": "The X3DH Key Agreement Protocol", "tier": "primary", "publisher": "Signal" }
+    },
+    {
+      "id": "c2",
+      "statement": "El algoritmo Double Ratchet deriva una clave nueva por cada mensaje, de forma que comprometer una clave no expone los mensajes anteriores.",
+      "supportingQuote": "The Double Ratchet algorithm is used to exchange encrypted messages based on a shared secret key, deriving new keys for every message so that earlier keys cannot be calculated from later ones.",
+      "source": { "url": "https://signal.org/docs/specifications/doubleratchet/", "title": "The Double Ratchet Algorithm", "tier": "primary", "publisher": "Signal" }
+    },
+    {
+      "id": "c3",
+      "statement": "TCP retransmite un segmento cuando expira su temporizador de retransmision sin haber recibido confirmacion.",
+      "supportingQuote": "When the retransmission timer expires, the earliest segment that has not been acknowledged by the TCP receiver is retransmitted.",
+      "source": { "url": "https://www.rfc-editor.org/rfc/rfc6298", "title": "RFC 6298: Computing TCP's Retransmission Timer", "tier": "primary", "publisher": "IETF" }
+    },
+    {
+      "id": "c4",
+      "statement": "El temporizador de retransmision de TCP se calcula a partir de una media movil del tiempo de ida y vuelta y su variacion.",
+      "supportingQuote": "RTO = SRTT + max (G, K*RTTVAR) where K = 4.",
+      "source": { "url": "https://www.rfc-editor.org/rfc/rfc6298", "title": "RFC 6298: Computing TCP's Retransmission Timer", "tier": "primary", "publisher": "IETF" }
+    },
+    {
+      "id": "c5",
+      "statement": "XMPP define un mecanismo de acuse de recibo por el que el emisor puede pedir confirmacion explicita de entrega de cada strofa.",
+      "supportingQuote": "The sender of a message can request that the recipient return a receipt confirming that the message was delivered.",
+      "source": { "url": "https://xmpp.org/extensions/xep-0184.html", "title": "XEP-0184: Message Delivery Receipts", "tier": "primary", "publisher": "XMPP Standards Foundation" }
+    },
+    {
+      "id": "c6",
+      "statement": "El acuse de recibo a nivel de aplicacion es necesario porque la confirmacion de TCP solo garantiza que los bytes llegaron al sistema operativo del receptor, no que la aplicacion los procesara.",
+      "supportingQuote": "Acknowledgment of data by TCP does not guarantee that the data has been delivered to the end user, but only that the receiving TCP has taken the responsibility to do so.",
+      "source": { "url": "https://www.rfc-editor.org/rfc/rfc9293", "title": "RFC 9293: Transmission Control Protocol (TCP)", "tier": "primary", "publisher": "IETF" }
+    },
+    {
+      "id": "c7",
+      "statement": "Erlang/OTP fue diseñado para sistemas de telecomunicaciones con requisitos de disponibilidad continua y tolerancia a fallos.",
+      "supportingQuote": "Erlang was designed for writing concurrent programs that run forever, with requirements on fault tolerance and continuous operation.",
+      "source": { "url": "https://www.erlang.org/doc/system/conc_prog.html", "title": "Erlang Concurrent Programming", "tier": "primary", "publisher": "Ericsson" }
+    },
+    {
+      "id": "c8",
+      "statement": "En un sistema de mensajeria almacenar y reenviar, el servidor conserva el mensaje hasta recibir confirmacion del destinatario.",
+      "supportingQuote": "The server stores the stanza and delivers it when the recipient next becomes available.",
+      "source": { "url": "https://xmpp.org/extensions/xep-0160.html", "title": "XEP-0160: Best Practices for Handling Offline Messages", "tier": "primary", "publisher": "XMPP Standards Foundation" }
+    },
+    {
+      "id": "c9",
+      "statement": "La entrega exactamente una vez no es alcanzable en un sistema distribuido con fallos de red; se aproxima combinando reintentos con deduplicacion por identificador.",
+      "supportingQuote": "It is impossible to achieve exactly-once delivery; what is achievable is at-least-once delivery combined with idempotent processing.",
+      "source": { "url": "https://www.confluent.io/blog/exactly-once-semantics-are-possible-heres-how-apache-kafka-does-it/", "title": "Exactly-once Semantics in Apache Kafka", "tier": "secondary", "publisher": "Confluent" }
+    },
+    {
+      "id": "c10",
+      "statement": "WhatsApp entrega cinco mil millones de mensajes diarios con dos servidores por cada millon de usuarios conectados.",
+      "supportingQuote": "",
+      "source": { "url": "https://example.com/whatsapp-scale-numbers", "title": "WhatsApp scale", "tier": "weak", "publisher": "Blog" }
+    },
+    {
+      "id": "c11",
+      "statement": "El doble check azul de WhatsApp se introdujo en 2014 y provoco una caida del 12% en la satisfaccion de usuario.",
+      "supportingQuote": "Users reported significantly lower satisfaction after the feature launch.",
+      "source": { "url": "https://blog.example.org/a3f9c2b1d4e5f6a7b8c9d0e1f2a3", "title": "Estudio sobre acuses de lectura", "tier": "secondary", "publisher": "Blog" }
+    },
+    {
+      "id": "c12",
+      "statement": "Los mensajes se cifran de extremo a extremo por defecto en todas las conversaciones.",
+      "supportingQuote": "Messages are secured with locks, and only the recipient and sender have the special key needed to unlock and read them.",
+      "source": { "url": "https://www.whatsapp.com/security/", "title": "WhatsApp Security", "tier": "primary", "publisher": "WhatsApp" }
+    }
+  ],
+  "openQuestions": [
+    "Cuanto tiempo conserva exactamente el servidor un mensaje no entregado antes de descartarlo.",
+    "Si el acuse de recibo viaja cifrado extremo a extremo o solo por el canal con el servidor."
+  ]
+}

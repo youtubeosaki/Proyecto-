@@ -1,21 +1,17 @@
 {
-  "name": "@osaki/cli",
+  "name": "@osaki/script",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "bin": {
-    "osaki": "./dist/index.js"
-  },
   "main": "./dist/index.js",
-  "scripts": {
-    "build": "tsc -p tsconfig.json"
-  },
+  "types": "./dist/index.d.ts",
+  "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" } },
+  "scripts": { "build": "tsc -p tsconfig.json" },
   "dependencies": {
     "@osaki/core": "workspace:*",
     "@osaki/db": "workspace:*",
     "@osaki/llm": "workspace:*",
-    "@osaki/ingest": "workspace:*",
     "@osaki/research": "workspace:*",
-    "@osaki/script": "workspace:*"
+    "zod": "^3.24.1"
   }
 }

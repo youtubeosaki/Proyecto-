@@ -26,7 +26,8 @@ restriccion es estructural.
 - **Fase 1 — completa.** Monorepo, configuracion, estado en SQLite, CLI por
   etapas, motor de Remotion con 6 componentes, sistema de movimiento continuo,
   transiciones, cama sonora generada y un video de prueba renderizado.
-- Fase 2 — investigacion y guion via Claude, con verificacion de fuentes.
+- **Fase 2 — completa.** Banco de ideas, investigacion con verificacion de
+  fuentes, tres angulos con aprobacion humana, y guion con marcas de escena.
 - Fase 3 — audio, timing y render end-to-end.
 - Fase 4 — n8n orquestando, con las aprobaciones humanas.
 - Fase 5 — subida, Shorts y bucle de analitica.
@@ -84,9 +85,12 @@ la etapa lee el artefacto de la anterior desde disco y sigue desde ahi.
 
 ```
 tools/            Generador de la cama sonora ambiental
-packages/core     Config, errores tipados, reintentos con backoff, tipos de dominio
+packages/core     Config, errores, backoff, tipos, artefactos, catalogo de escenas
 packages/db       SQLite: videos, etapas, aprobaciones, afirmaciones, analitica
 packages/llm      Interfaz de LLM + 3 adaptadores + cargador de prompts
+packages/ingest   RSS, Hacker News, deduplicacion y scoring de ideas
+packages/research Investigacion + verificacion de fuentes
+packages/script   Angulos, guion y parser de marcas de escena
 packages/cli      Binario `osaki`
 video/            Proyecto de Remotion: tema, componentes, composiciones
 prompts/          Prompts versionados, nunca embebidos en codigo
@@ -247,3 +251,62 @@ late sobre el. El anillo cierra el gesto: sin el, el haz apunta a la nada.
 Oki vive DENTRO del contenedor del diagrama, asi que comparte la
 transformacion de camara con el resto de la escena. Eso es lo que hace que se
 lea como parte del plano y no como una capa pegada encima.
+
+## Fase 2: del tema al guion
+
+Cuatro etapas, cada una ejecutable sola. Todo el recorrido funciona con
+`LLM_PROVIDER=mock` y las fixtures de `data/fixtures/`, sin gastar nada:
+
+```powershell
+pnpm osaki run ideas                              # llena el banco de ideas
+pnpm osaki ideas                                  # las mejores, ordenadas
+pnpm osaki new "Como WhatsApp garantiza que no se pierda un mensaje"
+pnpm osaki run research --video <id>              # hechos + verificacion
+pnpm osaki run angles   --video <id>              # APROBACION HUMANA #1
+pnpm osaki choose a2    --video <id> --notes "..."
+pnpm osaki run script   --video <id>              # guion con marcas de escena
+```
+
+### La verificacion de fuentes filtra en dos pasadas
+
+Primero **reglas mecanicas**, antes de gastar un solo token: sin fuente,
+fuente de nivel debil, sin cita literal, o URL con forma de inventada
+(dominio de ejemplo, identificador opaco larguisimo en la ruta). No hace
+falta un modelo para rechazar una afirmacion que no trae fuente, y una regla
+determinista no se deja convencer por una cita bien escrita.
+
+Despues un **revisor que trabaja en contra del investigador**. Son dos
+llamadas separadas a proposito y no una sola con instrucciones de "se
+riguroso": en una sola pasada el modelo juzga su propio trabajo y lo aprueba
+casi todo. Separandolas, el revisor recibe las afirmaciones sin saber quien
+las escribio ni por que.
+
+El revisor rechaza si hay que razonar dos pasos para ir de la cita a la
+afirmacion, o si la afirmacion añade precision que la fuente no tiene. Si no
+se pronuncia sobre una afirmacion, esa cuenta como rechazada: **silencio no
+es aprobacion**.
+
+Lo que sobrevive es lo unico que ve el generador de guion. Lo demas queda en
+un reporte de descartes que lees tu. Y si un tema no reune el minimo de
+afirmaciones verificadas (`MIN_VERIFIED_CLAIMS`), la etapa **falla**: un tema
+que no da para un video honesto de diez minutos da para relleno, y es mejor
+saberlo aqui que en el guion.
+
+### El guion no puede pedir escenas que no existen
+
+`packages/core/src/scenes.ts` es el catalogo, en datos puros sin React, y lo
+consumen los dos lados: el paquete `video` mapea cada tipo a su componente de
+Remotion, y las etapas de guion y storyboard inyectan las descripciones en el
+prompt. Si esta lista viviera solo del lado de React, el generador de guion
+llevaria una copia y las dos se separarian a la primera escena nueva.
+
+Si el guion pide un tipo que no esta en el catalogo, la etapa **falla y dice
+cual falta**. Mapearlo al componente mas parecido produciria un video que se
+renderiza sin errores y explica mal: el peor fallo posible, porque nadie lo
+revisa al no haber nada en rojo.
+
+### Trazabilidad hasta la fuente
+
+Cada segmento del guion lleva los ids de las afirmaciones en las que se
+apoya, y cada afirmacion lleva su fuente y su cita literal. Se puede seguir
+cualquier frase del video hasta el RFC del que sale.

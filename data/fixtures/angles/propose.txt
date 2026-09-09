@@ -1,0 +1,49 @@
+{
+  "angles": [
+    {
+      "id": "a1",
+      "hook": "Cuando mandas un mensaje y aparece un solo check, ese check no significa que el mensaje haya salido de tu telefono. Significa algo bastante mas raro.",
+      "title": "Los tres acuses de recibo que hacen falta para no perder un mensaje",
+      "thesis": "Un mensaje sobrevive porque el sistema no confia en ninguna capa: cada una confirma por separado y ninguna asume que la de abajo cumplio.",
+      "beats": [
+        "TCP ya confirma la entrega, asi que la pregunta obvia es por que hace falta un check mas",
+        "Lo que confirma TCP es que los bytes llegaron al sistema operativo, no que la aplicacion los leyera",
+        "El servidor guarda el mensaje y no lo suelta hasta tener confirmacion propia",
+        "El destinatario confirma a nivel de aplicacion, que es el segundo check",
+        "Reintentar sin identificador produce duplicados, y ahi entra la deduplicacion",
+        "La entrega exactamente una vez no existe: lo que existe es reintentar y deduplicar"
+      ],
+      "whyThisWorks": "Arranca de un elemento de interfaz que todo el mundo ha visto miles de veces y lo usa para abrir una capa que nadie mira. El riesgo es que la parte de TCP pida cuidado para no perder al espectador no tecnico."
+    },
+    {
+      "id": "a2",
+      "hook": "Para que un mensaje no se pierda, alguien tiene que estar dispuesto a mandarlo dos veces. Y otro alguien, a tirar el duplicado sin decir nada.",
+      "title": "Por que tu telefono manda el mismo mensaje varias veces",
+      "thesis": "La fiabilidad no se consigue evitando los fallos, sino asumiendo que van a ocurrir y haciendo que repetir sea inofensivo.",
+      "beats": [
+        "El temporizador de retransmision decide cuando algo se da por perdido",
+        "Ese temporizador se calcula con una media movil del tiempo de ida y vuelta",
+        "Si el mensaje si habia llegado, el reintento crea un duplicado",
+        "La deduplicacion por identificador es lo que hace el reintento seguro",
+        "Idempotencia: por que repetir tiene que no cambiar nada",
+        "El coste real de la fiabilidad es trabajo duplicado que nunca ves"
+      ],
+      "whyThisWorks": "El angulo mas solido tecnicamente y el que mejor se dibuja: paquetes que se pierden, temporizadores que expiran, duplicados que se descartan. Es el que mejor aprovecha las animaciones."
+    },
+    {
+      "id": "a3",
+      "hook": "El sistema que mueve tus mensajes esta escrito en un lenguaje diseñado en los años ochenta para centralitas telefonicas. Y esa decision es la razon de que funcione.",
+      "title": "La decision de 1986 que sostiene tu app de mensajeria",
+      "thesis": "Las garantias de entrega no salen del protocolo, salen de una arquitectura donde que un proceso se caiga es un evento normal y no una emergencia.",
+      "beats": [
+        "Erlang se diseño para centralitas que no pueden apagarse nunca",
+        "Dejar morir el proceso en vez de intentar recuperarlo",
+        "Un proceso por conversacion, y aislados entre si",
+        "Que un mensaje sobreviva a la caida del proceso que lo gestionaba",
+        "Por que esto se parece mas a una centralita que a una web",
+        "La fiabilidad como propiedad de la arquitectura, no del protocolo"
+      ],
+      "whyThisWorks": "Es el mas arriesgado de los tres: el gancho es historico y el pago llega tarde. Si funciona, es el mas memorable, porque conecta una decision antigua con algo que el espectador usa hoy. Si no, es el que peor retiene."
+    }
+  ]
+}

@@ -9,6 +9,9 @@ import {
 } from '@osaki/core';
 import { ApprovalRepository, StageRunRepository, VideoRepository, openDatabase } from '@osaki/db';
 import { STAGES, STAGE_LIST } from './stages.js';
+import { assertRenderApproved, runStage } from './runners.js';
+import { chooseAngle, readAngles } from '@osaki/script';
+import { listTopIdeas } from '@osaki/ingest';
 
 const log = createLogger('cli');
 
@@ -20,7 +23,9 @@ Uso:
   osaki stages                      Lista las etapas y en que fase llegan
   osaki new "<titulo>"              Crea un video nuevo
   osaki run <etapa> --video <id>    Ejecuta una etapa aislada
+  osaki choose <a1|a2|a3> --video <id> [--notes "..."]
   osaki approve <gate> --video <id> [--reject] [--notes "..."]
+  osaki ideas                       Mejores ideas guardadas
   osaki doctor                      Comprueba la configuracion
 
 Gates de aprobacion humana: angles, render
@@ -28,7 +33,7 @@ Gates de aprobacion humana: angles, render
 Ejemplos (PowerShell):
   pnpm osaki new "Como WhatsApp garantiza que no se pierda un mensaje"
   pnpm osaki run research --video vid_20260909_a3f1c2
-  pnpm osaki approve angles --video vid_20260909_a3f1c2 --notes "Me quedo con el 2"
+  pnpm osaki choose a2 --video vid_20260909_a3f1c2 --notes "Mas concreto"
 `.trim();
 
 interface ParsedArgs {
@@ -111,6 +116,46 @@ async function main(): Promise<void> {
       return;
     }
 
+    case 'ideas': {
+      const ideas = listTopIdeas(20);
+      if (ideas.length === 0) {
+        console.log('\n  El banco esta vacio. Llenalo con:  pnpm osaki run ideas\n');
+        return;
+      }
+      console.log('\n  SCORE  TITULO');
+      for (const idea of ideas) {
+        console.log(`  ${(idea.compositeScore ?? 0).toFixed(2).padStart(5)}  ${idea.title}`);
+      }
+      console.log('');
+      return;
+    }
+
+    case 'choose': {
+      const angleId = positional[0];
+      if (!angleId) throw new OsakiError('Uso: osaki choose <a1|a2|a3> --video <id>');
+
+      const videoId = requireVideoId(flags);
+      const notes = typeof flags.notes === 'string' ? flags.notes : undefined;
+
+      const updated = chooseAngle(videoId, angleId, notes);
+      const chosen = updated.angles.find((angle) => angle.id === angleId)!;
+
+      // La eleccion ES la aprobacion del gate #1: queda registrada con las
+      // alternativas que habia sobre la mesa.
+      new ApprovalRepository(openDatabase()).record({
+        videoId,
+        gate: 'angles',
+        decision: 'approved',
+        notes,
+        edited: { chosenAngleId: angleId, alternatives: updated.angles.map((angle) => angle.id) },
+      });
+
+      console.log(`\n  Angulo elegido: ${chosen.title}`);
+      if (notes) console.log(`  Tus notas: ${notes}`);
+      console.log(`\n  Siguiente:  pnpm osaki run script --video ${videoId}\n`);
+      return;
+    }
+
     case 'new': {
       const title = positional[0];
       if (!title) throw new OsakiError('Uso: osaki new "<titulo>"');
@@ -173,6 +218,14 @@ async function main(): Promise<void> {
       }
 
       const definition = STAGES[stageName];
+
+      // La ingesta alimenta el banco de ideas: no pertenece a ningun video.
+      if (stageName === 'ideas') {
+        const outcome = await runStage('ideas', null);
+        console.log('\n' + outcome.summary.join('\n') + '\n');
+        return;
+      }
+
       const videoId = requireVideoId(flags);
       const db = openDatabase();
 
@@ -193,12 +246,7 @@ async function main(): Promise<void> {
       }
 
       // Los gates humanos no se saltan por diseno: publish comprueba esto.
-      if (stageName === 'publish' && !new ApprovalRepository(db).isApproved(videoId, 'render')) {
-        throw new OsakiError(
-          `No se puede publicar ${videoId}: falta la aprobacion humana del render.\n` +
-            `  Revisa el video y luego:  pnpm osaki approve render --video ${videoId}`,
-        );
-      }
+      if (stageName === 'publish') assertRenderApproved(videoId);
 
       if (!definition.implemented) {
         throw new OsakiError(
@@ -207,6 +255,8 @@ async function main(): Promise<void> {
       }
 
       log.info(`etapa ${stageName} para ${videoId}`);
+      const outcome = await runStage(stageName, videoId);
+      console.log('\n' + outcome.summary.join('\n') + '\n');
       return;
     }
 

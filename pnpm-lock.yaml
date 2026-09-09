@@ -26,9 +26,18 @@ importers:
       '@osaki/db':
         specifier: workspace:*
         version: link:../db
+      '@osaki/ingest':
+        specifier: workspace:*
+        version: link:../ingest
       '@osaki/llm':
         specifier: workspace:*
         version: link:../llm
+      '@osaki/research':
+        specifier: workspace:*
+        version: link:../research
+      '@osaki/script':
+        specifier: workspace:*
+        version: link:../script
 
   packages/core:
     dependencies:
@@ -52,6 +61,24 @@ importers:
         specifier: ^7.6.12
         version: 7.6.13
 
+  packages/ingest:
+    dependencies:
+      '@osaki/core':
+        specifier: workspace:*
+        version: link:../core
+      '@osaki/db':
+        specifier: workspace:*
+        version: link:../db
+      '@osaki/llm':
+        specifier: workspace:*
+        version: link:../llm
+      fast-xml-parser:
+        specifier: ^4.5.1
+        version: 4.5.7
+      zod:
+        specifier: ^3.24.1
+        version: 3.25.76
+
   packages/llm:
     dependencies:
       '@anthropic-ai/sdk':
@@ -60,6 +87,39 @@ importers:
       '@osaki/core':
         specifier: workspace:*
         version: link:../core
+      zod:
+        specifier: ^3.24.1
+        version: 3.25.76
+
+  packages/research:
+    dependencies:
+      '@osaki/core':
+        specifier: workspace:*
+        version: link:../core
+      '@osaki/db':
+        specifier: workspace:*
+        version: link:../db
+      '@osaki/llm':
+        specifier: workspace:*
+        version: link:../llm
+      zod:
+        specifier: ^3.24.1
+        version: 3.25.76
+
+  packages/script:
+    dependencies:
+      '@osaki/core':
+        specifier: workspace:*
+        version: link:../core
+      '@osaki/db':
+        specifier: workspace:*
+        version: link:../db
+      '@osaki/llm':
+        specifier: workspace:*
+        version: link:../llm
+      '@osaki/research':
+        specifier: workspace:*
+        version: link:../research
       zod:
         specifier: ^3.24.1
         version: 3.25.76
@@ -876,6 +936,10 @@ packages:
   fast-uri@3.1.7:
     resolution: {integrity: sha512-dOvZVzjdZdz7phd9v6jCbwxrBW3fK6n8Rc0CtdmM4bumzMnxywBYhuph6J819RRw/ku+rLbelwfMunktuzVVHg==}
 
+  fast-xml-parser@4.5.7:
+    resolution: {integrity: sha512-a6Qh1RMCNbSrU1+sAyAAZH3rTe+OaWJbNZIq0S+ifZciUUOQtlVxBJwoTUE2bYhysmG/RYyI5WJFIKdBahJdrQ==}
+    hasBin: true
+
   fd-slicer@1.1.0:
     resolution: {integrity: sha512-cE1qsB/VwyQozZ+q1dGxR8LBYNZeofhEdUNGSMbQD3Gw2lAzX9Zb3uIU6Ebc/Fmyjo9AWWfnn0AUCHqtevs/8g==}
 
@@ -1232,6 +1296,9 @@ packages:
   strip-json-comments@2.0.1:
     resolution: {integrity: sha512-4gB8na07fecVVkOI6Rs4e7T6NOTki5EmL7TUduTs6bu3EdnSycntVJ4re8kgZA+wx9IueI2Y11bfbgwtzuE0KQ==}
     engines: {node: '>=0.10.0'}
+
+  strnum@1.1.2:
+    resolution: {integrity: sha512-vrN+B7DBIoTTZjnPNewwhx6cBA/H+IS7rfW68n7XxC1y7uoiGQBxaKzqucGUgavX15dJgiGztLJ8vxuEzwqBdA==}
 
   style-loader@4.0.0:
     resolution: {integrity: sha512-1V4WqhhZZgjVAVJyt7TdDPZoPBPNHbekX4fWnCJL1yQukhCeZhJySUL+gL9y6sNdN95uEOS83Y55SqHcP7MzLA==}
@@ -2185,6 +2252,10 @@ snapshots:
 
   fast-uri@3.1.7: {}
 
+  fast-xml-parser@4.5.7:
+    dependencies:
+      strnum: 1.1.2
+
   fd-slicer@1.1.0:
     dependencies:
       pend: 1.2.0
@@ -2496,6 +2567,8 @@ snapshots:
   strip-final-newline@2.0.0: {}
 
   strip-json-comments@2.0.1: {}
+
+  strnum@1.1.2: {}
 
   style-loader@4.0.0(webpack@5.96.1(esbuild@0.25.0)(postcss@8.5.28)):
     dependencies:

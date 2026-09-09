@@ -44,7 +44,10 @@ export interface CompletionResult {
 export async function completeJson<T>(
   provider: LlmProvider,
   request: CompletionRequest,
-  schema: z.ZodType<T>,
+  // El tercer parametro fija T al tipo de SALIDA del schema. Sin el, un
+  // schema con `.default()` liga T a su tipo de entrada y los campos con
+  // default salen opcionales pese a estar siempre presentes tras parsear.
+  schema: z.ZodType<T, z.ZodTypeDef, unknown>,
 ): Promise<T> {
   const { text } = await provider.complete(request);
   const json = extractJson(text);

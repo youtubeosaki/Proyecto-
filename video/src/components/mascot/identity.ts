@@ -38,6 +38,12 @@
  *   asimetrico. Es lo que hace que la silueta sea identificable en
  *   una miniatura de 120px y lo que le da sensacion de estar vivo.
  *
+ * - MANOS FLOTANTES, SIN BRAZOS. No estan unidas al cuerpo, como en EVE o
+ *   Rayman. Dos razones: un brazo articulado obliga a resolver cinematica
+ *   inversa para que el codo caiga bien en cada gesto, y ademas rompe la
+ *   silueta limpia que hace a Oki reconocible en miniatura. Flotando, la
+ *   mano va donde haga falta y el personaje sigue leyendose de un vistazo.
+ *
  * - SIN RELLENOS SATURADOS. El personaje vive sobre el mismo fondo
  *   oscuro que el resto del canal y usa el mismo azul de acento. No
  *   compite con los diagramas: los acompaña.
@@ -67,6 +73,18 @@ export const OKI_GEOMETRY = {
     width: 19,
     height: 27,
     radius: 9.5,
+  },
+  hand: {
+    radius: 17,
+    /** Posicion en reposo, a los lados del cuerpo. */
+    restLeftX: 4,
+    restRightX: 196,
+    restY: 152,
+    /** Centro desde el que se mide el gesto de señalar. */
+    pivotX: 100,
+    pivotY: 120,
+    /** Distancia a la que se aleja la mano al señalar. */
+    pointRadius: 104,
   },
   antenna: {
     /** Descentrada a la izquierda a proposito. */
